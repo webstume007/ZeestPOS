@@ -18,6 +18,7 @@ export default function CashRegister() {
   const [cashType, setCashType] = useState<"in" | "out">("in");
   const [amount, setAmount] = useState<number>(0);
   const [reason, setReason] = useState("");
+  const [filter, setFilter] = useState("10");
   
   const [selectedCashier, setSelectedCashier] = useState("");
   const [cashiers, setCashiers] = useState<string[]>([]);
@@ -110,6 +111,20 @@ export default function CashRegister() {
   const totalOut = transactions.reduce((acc, curr) => acc + Number(curr.cash_out), 0);
   const netBalance = totalIn - totalOut;
 
+  const filteredTransactions = transactions.filter(tx => {
+    const txDate = new Date(tx.timestamp);
+    const now = new Date();
+    if (filter === "This Week") {
+      const weekAgo = new Date();
+      weekAgo.setDate(now.getDate() - 7);
+      return txDate >= weekAgo;
+    }
+    if (filter === "This Year") {
+      return txDate.getFullYear() === now.getFullYear();
+    }
+    return true; // All Day, All Time, or numeric limits
+  }).slice(0, filter === "10" ? 10 : (filter === "50" ? 50 : (filter === "100" ? 100 : undefined)));
+
   return (
     <div className="p-8 max-w-7xl mx-auto h-full flex flex-col">
       
@@ -161,25 +176,46 @@ export default function CashRegister() {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-4 mb-6">
-        <button
-          onClick={() => { setCashType("in"); setIsCashModalOpen(true); }}
-          className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 text-slate-700 dark:text-slate-300 px-5 py-3 rounded-xl font-medium transition-colors"
-        >
-          <ArrowDownToLine className="w-5 h-5" />
-          Add Manual Cash In
-        </button>
-        <button
-          onClick={() => { setCashType("out"); setIsCashModalOpen(true); }}
-          className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 text-slate-700 dark:text-slate-300 px-5 py-3 rounded-xl font-medium transition-colors"
-        >
-          <ArrowUpFromLine className="w-5 h-5" />
-          Add Cash Out
-        </button>
+      {/* Action Buttons & Filter */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex flex-wrap gap-4 w-full sm:w-auto">
+          <button
+            onClick={() => { setCashType("in"); setIsCashModalOpen(true); }}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 text-slate-700 dark:text-slate-300 px-5 py-3 rounded-xl font-medium transition-colors"
+          >
+            <ArrowDownToLine className="w-5 h-5" />
+            <span className="hidden sm:inline">Add Manual Cash In</span>
+            <span className="sm:hidden">Cash In</span>
+          </button>
+          <button
+            onClick={() => { setCashType("out"); setIsCashModalOpen(true); }}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 text-slate-700 dark:text-slate-300 px-5 py-3 rounded-xl font-medium transition-colors"
+          >
+            <ArrowUpFromLine className="w-5 h-5" />
+            <span className="hidden sm:inline">Add Cash Out</span>
+            <span className="sm:hidden">Cash Out</span>
+          </button>
+        </div>
+        
+        <div className="w-full sm:w-auto">
+          <select 
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="w-full sm:w-48 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+          >
+            <option value="10">Last 10 Records</option>
+            <option value="50">Last 50 Records</option>
+            <option value="100">Last 100 Records</option>
+            <option value="All Day">All Day</option>
+            <option value="This Week">This Week</option>
+            <option value="This Year">This Year</option>
+            <option value="All Time">All Time</option>
+          </select>
+        </div>
       </div>
 
       {/* Ledger */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm flex-1 overflow-hidden flex flex-col">
+      <div className="md:bg-white md:dark:bg-slate-900 md:border md:border-slate-200 md:dark:border-slate-800 md:rounded-3xl md:shadow-sm flex-1 overflow-hidden flex flex-col">
         <div className="overflow-x-auto flex-1 p-6">
           <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
             <thead className="text-slate-500 font-medium pb-4 border-b border-slate-100 dark:border-slate-800">
@@ -195,19 +231,19 @@ export default function CashRegister() {
                 <tr>
                   <td colSpan={4} className="py-8 text-center text-slate-500">Loading transactions...</td>
                 </tr>
-              ) : transactions.length === 0 ? (
+              ) : filteredTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-8 text-center text-slate-500">No transactions recorded in this shift yet.</td>
                 </tr>
               ) : (
-                transactions.map((tx, idx) => (
+                filteredTransactions.map((tx, idx) => (
                   <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                    <td className="py-4 pr-6 font-mono text-xs text-slate-500">{format(new Date(tx.timestamp), "hh:mm a")}</td>
-                    <td className="py-4 px-6 text-slate-900 dark:text-slate-100 font-medium">{tx.reason}</td>
-                    <td className="py-4 px-6 text-right font-semibold text-emerald-600 dark:text-emerald-400">
+                    <td className="py-4 pr-2 sm:pr-6 font-mono text-xs text-slate-500">{format(new Date(tx.timestamp), "hh:mm a")}</td>
+                    <td className="py-4 px-2 sm:px-6 text-slate-900 dark:text-slate-100 font-medium">{tx.reason}</td>
+                    <td className="py-4 px-2 sm:px-6 text-right font-semibold text-emerald-600 dark:text-emerald-400">
                       {Number(tx.cash_in) > 0 ? `Rs ${Number(tx.cash_in).toFixed(0)}` : "-"}
                     </td>
-                    <td className="py-4 pl-6 text-right font-semibold text-amber-600 dark:text-amber-400">
+                    <td className="py-4 pl-2 sm:pl-6 text-right font-semibold text-amber-600 dark:text-amber-400">
                       {Number(tx.cash_out) > 0 ? `Rs ${Number(tx.cash_out).toFixed(0)}` : "-"}
                     </td>
                   </tr>
