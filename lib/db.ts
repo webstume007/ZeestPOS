@@ -72,8 +72,14 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
   if (typeof window !== 'undefined' && !window.electronAPI) {
     if (!browserDb) {
       console.warn("⚠️ ELECTRON API NOT FOUND: Booting local PGlite fallback for Web Browser testing...");
-      const { PGlite } = await import('@electric-sql/pglite');
-      browserDb = new PGlite('idb://zeestpos-browser-db');
+      try {
+        const { PGlite } = await import('@electric-sql/pglite');
+        browserDb = new PGlite('idb://zeestpos-browser-db');
+      } catch (e: any) {
+        console.error("Failed to load PGlite", e);
+        if (typeof window !== 'undefined') alert(`PGlite Import Error: ${e.message}`);
+        throw e;
+      }
       
       // Initialize schema for web fallback
       await browserDb.exec(`
