@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Modal } from "@/components/ui/Modal";
 import { useShift } from "@/hooks/useShift";
-import { CashTransaction, getShiftTransactions, addCashTransaction } from "@/lib/db";
+import { CashTransaction, getShiftTransactions, addCashTransaction, getSetting } from "@/lib/db";
 import { MonitorSpeaker, ArrowDownToLine, ArrowUpFromLine, Wallet, LogOut, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -20,7 +20,19 @@ export default function CashRegister() {
   const [reason, setReason] = useState("");
   
   const [selectedCashier, setSelectedCashier] = useState("");
-  const cashiers = ["Brother A", "Brother B", "Admin"];
+  const [cashiers, setCashiers] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadCashiers = async () => {
+      try {
+        const cashiersJson = await getSetting("cashiers", "[]");
+        setCashiers(JSON.parse(cashiersJson));
+      } catch (e) {
+        console.error("Failed to load cashiers:", e);
+      }
+    };
+    loadCashiers();
+  }, []);
 
   const fetchTransactions = async () => {
     if (!shiftId) return;
@@ -94,6 +106,9 @@ export default function CashRegister() {
                 <option value="" disabled>Select your name...</option>
                 {cashiers.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+              {cashiers.length === 0 && (
+                <p className="text-sm text-red-500 mt-2">No cashiers configured. Please add cashiers in the Settings page.</p>
+              )}
             </div>
             <button
               type="submit"

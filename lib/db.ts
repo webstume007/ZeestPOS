@@ -337,3 +337,8 @@ export async function updateSetting(key: string, value: string): Promise<void> {
     ";
     await query(sql, [key, value]);
 }
+
+export async function getSales(): Promise<Sale[]> {
+    const sql = "SELECT * FROM sales ORDER BY timestamp DESC";
+    return await query<Sale>(sql);
+}
