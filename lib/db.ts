@@ -10,6 +10,7 @@ export interface Product {
     retail_price: number | null;
     wholesale_shopkeeper_price: number | null;
     wholesale_customer_price: number | null;
+    is_deleted?: boolean | null;
 }
 
 export interface Customer {
@@ -82,7 +83,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
             COALESCE(SUM(current_stock), 0) as total_stock,
             COALESCE(SUM(current_stock * buy_price), 0) as inventory_value
         FROM products
-        WHERE current_stock > 0
+        WHERE current_stock > 0 AND is_deleted IS NOT TRUE
     `);
 
     return {
@@ -148,6 +149,7 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
           retail_price NUMERIC,
           wholesale_shopkeeper_price NUMERIC,
           wholesale_customer_price NUMERIC,
+          is_deleted BOOLEAN DEFAULT FALSE,
           updated_at TIMESTAMP DEFAULT NOW()
         );
         CREATE TABLE IF NOT EXISTS customers (
@@ -203,6 +205,7 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
       // Add newly added column to web fallback dynamically just in case
       try {
         await browserDb.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type TEXT DEFAULT 'Regular';`);
+        await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
         await browserDb.exec(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMP DEFAULT NOW());`);
         await browserDb.exec(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, username TEXT, cnic TEXT UNIQUE, role TEXT DEFAULT 'Cashier', updated_at TIMESTAMP DEFAULT NOW());`);
       } catch (e: any) {
@@ -231,7 +234,7 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
 
 // Product CRUD
 export async function getProducts(): Promise<Product[]> {
-    return await query<Product>('SELECT * FROM products ORDER BY name_en ASC');
+    return await query<Product>('SELECT * FROM products WHERE is_deleted IS NOT TRUE ORDER BY name_en ASC');
 }
 
 export async function createProduct(product: Omit<Product, 'id'>): Promise<Product> {
@@ -279,7 +282,7 @@ export async function updateProduct(id: string, product: Partial<Product>): Prom
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-    await query('DELETE FROM products WHERE id = $1', [id]);
+    await query('UPDATE products SET is_deleted = TRUE, updated_at = NOW() WHERE id = $1', [id]);
 }
 
 export async function getCustomers(): Promise<Customer[]> {

@@ -25,7 +25,8 @@ async function initDB() {
         current_stock INTEGER,
         retail_price NUMERIC,
         wholesale_shopkeeper_price NUMERIC,
-        wholesale_customer_price NUMERIC
+        wholesale_customer_price NUMERIC,
+        is_deleted BOOLEAN DEFAULT FALSE
     );
 
     CREATE TABLE IF NOT EXISTS customers (
@@ -88,6 +89,7 @@ async function initDB() {
   // Add newly added column to web fallback dynamically just in case
   try {
     await db.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type TEXT DEFAULT 'Regular';`);
+    await db.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
   } catch (e) {}
 
   // PGlite trigger creation
