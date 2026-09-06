@@ -126,11 +126,17 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
           reason TEXT,
           updated_at TIMESTAMP DEFAULT NOW()
         );
+        CREATE TABLE IF NOT EXISTS settings (
+          key TEXT PRIMARY KEY,
+          value TEXT,
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
       `);
       
       // Add newly added column to web fallback dynamically just in case
       try {
         await browserDb.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type TEXT DEFAULT 'Regular';`);
+        await browserDb.exec(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMP DEFAULT NOW());`);
       } catch (e) {}
 
       // Insert a dummy product for testing if empty
@@ -314,4 +320,20 @@ export async function addCashTransaction(
         INSERT INTO cash_register (shift_id, cashier_id, cash_in, cash_out, reason)
         VALUES ($1, $2, $3, $4, $5)
     `, [shiftId, cashierId, cashIn, cashOut, reason]);
+}
+
+// Settings CRUD
+export async function getSetting(key: string, defaultValue: string = ""): Promise<string> {
+    const sql = "SELECT value FROM settings WHERE key = $1";
+    const rows = await query<{ value: string }>(sql, [key]);
+    return rows.length > 0 ? rows[0].value : defaultValue;
+}
+
+export async function updateSetting(key: string, value: string): Promise<void> {
+    const sql = "
+        INSERT INTO settings (key, value) 
+        VALUES ($1, $2)
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+    ";
+    await query(sql, [key, value]);
 }
