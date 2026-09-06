@@ -86,7 +86,12 @@ export default function CashRegister() {
   };
 
   const { user } = useAuth();
-  const selectedCashier = user?.username || "";
+
+  useEffect(() => {
+    if (user?.username) {
+      setSelectedCashier(user.username);
+    }
+  }, [user]);
 
   if (!shiftId || !cashierId) {
     return (
