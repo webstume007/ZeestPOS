@@ -11,6 +11,15 @@ export interface Product {
     wholesale_shopkeeper_price: number | null;
     wholesale_customer_price: number | null;
     is_deleted?: boolean | null;
+    vendor_id?: string | null;
+}
+
+export interface Vendor {
+    id: string;
+    name: string;
+    representative_name: string | null;
+    contact: string | null;
+    address: string | null;
 }
 
 export interface Customer {
@@ -30,6 +39,9 @@ export interface Sale {
     total_amount: number;
     amount_paid: number;
     payment_status: string;
+    customer_name?: string | null;
+    discount_amount?: number;
+    invoice_number?: string | null;
 }
 
 export interface SaleItem {
@@ -86,9 +98,15 @@ export async function getDashboardStats(): Promise<DashboardStats> {
         WHERE current_stock > 0 AND is_deleted IS NOT TRUE
     `);
 
+    const discountRes = await query<{ discount: number }>(`
+        SELECT COALESCE(SUM(discount_amount), 0) as discount
+        FROM sales
+        WHERE DATE(timestamp) = CURRENT_DATE
+    `);
+
     return {
         todaySales: Number(salesRes[0]?.total_sales || 0),
-        todayProfit: Number(profitRes[0]?.profit || 0),
+        todayProfit: Number(profitRes[0]?.profit || 0) - Number(discountRes[0]?.discount || 0),
         availableStockSum: Number(stockRes[0]?.total_stock || 0),
         inventoryValuation: Number(stockRes[0]?.inventory_value || 0)
     };
@@ -150,6 +168,15 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
           wholesale_shopkeeper_price NUMERIC,
           wholesale_customer_price NUMERIC,
           is_deleted BOOLEAN DEFAULT FALSE,
+          vendor_id UUID,
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS vendors (
+          id UUID PRIMARY KEY,
+          name TEXT,
+          representative_name TEXT,
+          contact TEXT,
+          address TEXT,
           updated_at TIMESTAMP DEFAULT NOW()
         );
         CREATE TABLE IF NOT EXISTS customers (
@@ -168,6 +195,9 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
           total_amount NUMERIC,
           amount_paid NUMERIC,
           payment_status TEXT,
+          customer_name TEXT,
+          discount_amount NUMERIC DEFAULT 0,
+          invoice_number TEXT,
           timestamp TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
@@ -204,6 +234,20 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
       
       // Add newly added column to web fallback dynamically just in case
       try {
+        await browserDb.exec(`
+          CREATE TABLE IF NOT EXISTS vendors (
+            id UUID PRIMARY KEY,
+            name TEXT,
+            representative_name TEXT,
+            contact TEXT,
+            address TEXT,
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS vendor_id UUID;`);
+        await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name TEXT;`);
+        await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_amount NUMERIC DEFAULT 0;`);
+        await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_number TEXT;`);
         await browserDb.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type TEXT DEFAULT 'Regular';`);
         await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
         await browserDb.exec(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMP DEFAULT NOW());`);
@@ -241,17 +285,37 @@ export async function createProduct(product: Omit<Product, 'id'>): Promise<Produ
     const sql = `
         INSERT INTO products (
             id, name_en, name_ur, category, buy_price, buy_time, current_stock,
-            retail_price, wholesale_shopkeeper_price, wholesale_customer_price
+            retail_price, wholesale_shopkeeper_price, wholesale_customer_price, vendor_id
         ) VALUES (
-            gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9
+            gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
         ) RETURNING *
     `;
     const params = [
         product.name_en, product.name_ur, product.category, product.buy_price,
         product.buy_time, product.current_stock, product.retail_price,
-        product.wholesale_shopkeeper_price, product.wholesale_customer_price
+        product.wholesale_shopkeeper_price, product.wholesale_customer_price, product.vendor_id || null
     ];
     const rows = await query<Product>(sql, params);
+    return rows[0];
+}
+
+// Vendor CRUD
+export async function getVendors(): Promise<Vendor[]> {
+    return await query<Vendor>('SELECT * FROM vendors ORDER BY name ASC');
+}
+
+export async function createVendor(vendor: Omit<Vendor, 'id'>): Promise<Vendor> {
+    const sql = `
+        INSERT INTO vendors (
+            id, name, representative_name, contact, address
+        ) VALUES (
+            gen_random_uuid(), $1, $2, $3, $4
+        ) RETURNING *
+    `;
+    const params = [
+        vendor.name, vendor.representative_name, vendor.contact, vendor.address
+    ];
+    const rows = await query<Vendor>(sql, params);
     return rows[0];
 }
 
@@ -342,12 +406,13 @@ export async function processCheckout(
 ): Promise<void> {
     // Insert Sale
     const saleSql = `
-        INSERT INTO sales (invoice_id, customer_id, cashier_id, total_amount, amount_paid, payment_status)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO sales (invoice_id, customer_id, cashier_id, total_amount, amount_paid, payment_status, customer_name, discount_amount, invoice_number)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     `;
     await query(saleSql, [
         sale.invoice_id, sale.customer_id, sale.cashier_id, 
-        sale.total_amount, sale.amount_paid, sale.payment_status
+        sale.total_amount, sale.amount_paid, sale.payment_status,
+        sale.customer_name || null, sale.discount_amount || 0, sale.invoice_number || null
     ]);
 
     // Insert Items

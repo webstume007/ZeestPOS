@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Modal } from "@/components/ui/Modal";
 import { ProductForm } from "@/components/stock/ProductForm";
 import { getProducts, deleteProduct, Product } from "@/lib/db";
@@ -56,7 +55,6 @@ export default function StockManagement() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto h-full flex flex-col">
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Stock Management" }]} />
       
       <div className="flex justify-between items-center mb-8">
         <div>

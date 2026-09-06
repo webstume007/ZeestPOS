@@ -37,8 +37,8 @@ export function useSync() {
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // 5 minute interval
-    const interval = setInterval(runSync, 5 * 60 * 1000);
+    // 1 hour interval
+    const interval = setInterval(runSync, 3600000);
 
     return () => {
       window.removeEventListener("online", handleOnline);
@@ -47,5 +47,5 @@ export function useSync() {
     };
   }, []);
 
-  return { status, runSync };
+  return { status, runSync, triggerManualSync: runSync };
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Customer, Sale, getCustomer, getCustomerSales, receiveKhataPayment } from "@/lib/db";
 import { Modal } from "@/components/ui/Modal";
 import { User, Receipt, Banknote, History, Wallet } from "lucide-react";
@@ -66,11 +65,6 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="p-8 max-w-7xl mx-auto h-full flex flex-col">
-      <Breadcrumb items={[
-        { label: "Home", href: "/" }, 
-        { label: "Customer Accounts", href: "/customers" },
-        { label: customer.full_name || "Profile" }
-      ]} />
       
       {/* Header Profile Card */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-center justify-between mb-8 gap-6">

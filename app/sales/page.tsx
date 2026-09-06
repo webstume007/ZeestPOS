@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Sale, getSales } from "@/lib/db";
 import { History, Search, FileText } from "lucide-react";
 import { format } from "date-fns";
@@ -36,7 +35,6 @@ export default function SalesHistory() {
       <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <Breadcrumb items={[{ label: "Sales History" }]} />
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mt-4 flex items-center gap-3">
               <History className="w-8 h-8 text-amber-500" />
               Sales History

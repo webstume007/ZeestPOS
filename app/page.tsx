@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import Link from "next/link";
 import { ShoppingCart, Package, History, Users, MonitorSpeaker, Settings, UserCircle, TrendingUp, DollarSign, Box } from "lucide-react";
 import { useShift } from "@/hooks/useShift";
@@ -34,8 +33,6 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto h-full flex flex-col">
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Dashboard" }]} />
-      
       <div className="mb-6 md:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mt-2">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">Main Dashboard</h1>

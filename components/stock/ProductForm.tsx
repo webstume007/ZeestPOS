@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Product, createProduct, updateProduct } from "@/lib/db";
+import { useState, useEffect } from "react";
+import { Product, createProduct, updateProduct, getSetting, getVendors, createVendor, Vendor } from "@/lib/db";
+import { Plus } from "lucide-react";
 
 interface ProductFormProps {
   initialData?: Product;
@@ -20,15 +21,50 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
     retail_price: initialData?.retail_price || 0,
     wholesale_shopkeeper_price: initialData?.wholesale_shopkeeper_price || 0,
     wholesale_customer_price: initialData?.wholesale_customer_price || 0,
+    vendor_id: initialData?.vendor_id || "",
   });
+
+  const [categories, setCategories] = useState<string[]>(["General"]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [showNewVendor, setShowNewVendor] = useState(false);
+  const [newVendorData, setNewVendorData] = useState({
+    name: "",
+    representative_name: "",
+    contact: "",
+    address: ""
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const defaultCategories = ["Plastic", "Creams", "Lotions", "Hair Colors", "Elastic", "Toys", "General"];
+        const catsJson = await getSetting("product_categories", JSON.stringify(defaultCategories));
+        setCategories(JSON.parse(catsJson));
+
+        const vends = await getVendors();
+        setVendors(vends);
+      } catch (err) {
+        console.error("Failed to fetch initial data:", err);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      let finalVendorId = formData.vendor_id;
+
+      if (showNewVendor && newVendorData.name.trim()) {
+        const newVendor = await createVendor(newVendorData);
+        finalVendorId = newVendor.id;
+      }
+
       const payload = {
         ...formData,
+        vendor_id: finalVendorId || null,
         buy_time: new Date().toISOString(),
       };
 
@@ -53,7 +89,10 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
     }));
   };
 
-  const categories = ["Plastic", "Creams", "Lotions", "Hair Colors", "Elastic", "Toys", "General"];
+  const handleNewVendorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewVendorData((prev) => ({ ...prev, [name]: value }));
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -82,6 +121,77 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
             className="font-urdu w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-right"
             placeholder="پروڈکٹ کا نام"
           />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Category</label>
+          <select
+            name="category"
+            value={formData.category}
+            onChange={handleChange}
+            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Vendor (Optional)</label>
+            <button 
+              type="button" 
+              onClick={() => setShowNewVendor(!showNewVendor)}
+              className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 font-medium"
+            >
+              <Plus className="w-3 h-3" /> {showNewVendor ? "Cancel New Vendor" : "New Vendor"}
+            </button>
+          </div>
+          
+          {!showNewVendor ? (
+            <select
+              name="vendor_id"
+              value={formData.vendor_id}
+              onChange={handleChange}
+              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            >
+              <option value="">Select a vendor...</option>
+              {vendors.map((v) => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </select>
+          ) : (
+            <div className="space-y-3 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl">
+              <input
+                type="text"
+                name="name"
+                value={newVendorData.name}
+                onChange={handleNewVendorChange}
+                placeholder="Vendor Name *"
+                required
+                className="w-full p-2 text-sm rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              />
+              <input
+                type="text"
+                name="representative_name"
+                value={newVendorData.representative_name}
+                onChange={handleNewVendorChange}
+                placeholder="Representative Name"
+                className="w-full p-2 text-sm rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              />
+              <input
+                type="text"
+                name="contact"
+                value={newVendorData.contact}
+                onChange={handleNewVendorChange}
+                placeholder="Contact Number"
+                className="w-full p-2 text-sm rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              />
+            </div>
+          )}
         </div>
       </div>
 

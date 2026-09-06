@@ -1,15 +1,35 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Package, History, Users, MonitorSpeaker, Settings, Cloud, CloudOff, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, Package, History, Users, MonitorSpeaker, Settings, Cloud, CloudOff, RefreshCw, DownloadCloud } from 'lucide-react';
 import { useSync } from '@/hooks/useSync';
 import { useAuth } from '@/components/providers/AuthProvider';
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { status } = useSync();
+  const { status, triggerManualSync } = useSync();
   const { user, logout } = useAuth();
+  
+  const [updateStatus, setUpdateStatus] = useState<"idle" | "available" | "downloaded">("idle");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window as any).electronAPI) {
+      (window as any).electronAPI.onUpdateAvailable(() => {
+        setUpdateStatus("available");
+      });
+      (window as any).electronAPI.onUpdateDownloaded(() => {
+        setUpdateStatus("downloaded");
+      });
+    }
+  }, []);
+
+  const handleRestart = () => {
+    if (typeof window !== "undefined" && (window as any).electronAPI) {
+      (window as any).electronAPI.restartApp();
+    }
+  };
 
   if (pathname === "/login") {
     return null;
@@ -60,9 +80,31 @@ export function Sidebar() {
         </div>
       )}
 
+      {/* Update Notification */}
+      {updateStatus !== "idle" && (
+        <div className="mx-4 mb-2 p-3 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+          <div className="flex items-center gap-2 mb-2 text-indigo-700 dark:text-indigo-300 font-medium text-sm">
+            <DownloadCloud className={`w-4 h-4 ${updateStatus === "available" ? "animate-bounce" : ""}`} />
+            {updateStatus === "available" ? "Downloading Update..." : "Update Ready"}
+          </div>
+          {updateStatus === "downloaded" && (
+            <button 
+              onClick={handleRestart}
+              className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors"
+            >
+              Restart to Install
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Sync Status Indicator */}
       <div className="p-4 mx-4 mb-4 border-t border-slate-200 dark:border-slate-800">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-xl text-sm font-medium transition-colors">
+        <button 
+          onClick={() => status !== "syncing" && triggerManualSync()}
+          disabled={status === "syncing" || status === "offline"}
+          className="flex items-center gap-3 px-2 py-2 rounded-xl text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 w-full text-left"
+        >
           {status === "syncing" && (
             <>
               <RefreshCw className="w-5 h-5 text-blue-500 animate-spin" />
@@ -87,7 +129,7 @@ export function Sidebar() {
               <span className="text-amber-500">Sync Error</span>
             </>
           )}
-        </div>
+        </button>
       </div>
     </aside>
   );

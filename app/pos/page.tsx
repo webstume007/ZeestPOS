@@ -5,6 +5,7 @@ import { Product, Customer, getProducts, getCustomers, processCheckout, createCu
 import { Search, ShoppingCart, Plus, Minus, X, CheckCircle2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { useShift } from "@/hooks/useShift";
+import { InvoiceReceipt } from "@/components/pos/InvoiceReceipt";
 
 type PricingTier = "retail_price" | "wholesale_customer_price" | "wholesale_shopkeeper_price";
 
@@ -27,6 +28,15 @@ export default function POSPage() {
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ full_name: "", whatsapp_number: "", address: "", customer_type: "Regular" });
   const [isSavingCustomer, setIsSavingCustomer] = useState(false);
+  
+  // New features state
+  const [discount, setDiscount] = useState(0);
+  const [temporaryCustomer, setTemporaryCustomer] = useState("");
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [lastInvoiceData, setLastInvoiceData] = useState<any>(null);
+  
+  // Mobile UI Step State
+  const [mobileStep, setMobileStep] = useState<"search" | "cart">("search");
 
   const { shiftId, cashierId } = useShift();
 
@@ -43,6 +53,7 @@ export default function POSPage() {
   const categories = ["All", ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
 
   const filteredProducts = products.filter(p => {
+    if (!searchQuery.trim()) return false;
     const matchesSearch = 
       p.name_en?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.name_ur?.includes(searchQuery);
@@ -105,22 +116,32 @@ export default function POSPage() {
     }
     setIsProcessing(true);
 
-    try {
+      const date = new Date();
+      const invoiceString = `${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}${date.getHours().toString().padStart(2, '0')}${date.getMinutes().toString().padStart(2, '0')}${date.getSeconds().toString().padStart(2, '0')}-${localStorage.getItem("cashierName")?.replace(/\\s+/g, '') || "cashier"}`;
+      
       const invoice_id = crypto.randomUUID();
       const isKhata = paymentMethod === "khata";
       
-      const amountPaid = isKhata ? amountPaidNow : cartTotal;
-      const unpaidRemaining = isKhata ? cartTotal - amountPaidNow : 0;
+      const amountPaid = isKhata ? amountPaidNow : cartTotal - discount;
+      const unpaidRemaining = isKhata ? cartTotal - discount - amountPaidNow : 0;
+      
+      const isTemporary = !isKhata && temporaryCustomer.trim() !== "";
+      const customerObj = customers.find(c => c.id === selectedCustomerId);
 
-      await processCheckout(
-        {
+      const payload = {
           invoice_id,
-          customer_id: isKhata ? selectedCustomerId : null,
+          customer_id: isKhata && !isTemporary ? selectedCustomerId : null,
           cashier_id: cashierId,
           total_amount: cartTotal,
           amount_paid: amountPaid,
-          payment_status: isKhata && unpaidRemaining > 0 ? "partial" : "paid"
-        },
+          payment_status: isKhata && unpaidRemaining > 0 ? "partial" : "paid",
+          customer_name: isTemporary ? temporaryCustomer.trim() : null,
+          discount_amount: discount,
+          invoice_number: invoiceString
+      };
+
+      await processCheckout(
+        payload,
         cart.map(item => ({
           product_id: item.product.id,
           quantity: item.quantity,
@@ -130,12 +151,25 @@ export default function POSPage() {
         isKhata && selectedCustomerId ? { customerId: selectedCustomerId, amountToAdd: unpaidRemaining } : undefined
       );
 
+      setLastInvoiceData({
+        ...payload,
+        cart,
+        date,
+        cashierName: localStorage.getItem("cashierName") || "Cashier",
+        customerObj,
+        customerPhone: isTemporary ? "" : (customerObj?.whatsapp_number || "")
+      });
+      setShowInvoice(true);
+
       // Reset
       setCart([]);
       setIsCheckoutModalOpen(false);
       setPaymentMethod("cash");
       setSelectedCustomerId("");
       setAmountPaidNow(0);
+      setDiscount(0);
+      setTemporaryCustomer("");
+      setMobileStep("search");
       
       // Refresh stock
       const p = await getProducts();
@@ -149,10 +183,10 @@ export default function POSPage() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 relative">
       
       {/* LEFT PANE: Product Catalog (65%) */}
-      <div className="w-[65%] flex flex-col border-r border-slate-200 dark:border-slate-800">
+      <div className={`w-full md:w-[65%] flex-col border-r border-slate-200 dark:border-slate-800 ${mobileStep === 'search' ? 'flex' : 'hidden md:flex'}`}>
         
         {/* Top Header & Search */}
         <div className="p-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-10 shadow-sm">
@@ -186,8 +220,18 @@ export default function POSPage() {
         </div>
 
         {/* Product Grid */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="flex-1 overflow-y-auto p-6 pb-24">
+          {!searchQuery.trim() ? (
+            <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4">
+              <Search className="w-16 h-16 opacity-20" />
+              <p>Search for a product to begin adding to cart.</p>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4">
+              <p>No products found for "{searchQuery}"</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProducts.map((product) => (
               <button
                 key={product.id}
@@ -214,15 +258,34 @@ export default function POSPage() {
               </button>
             ))}
           </div>
+          )}
+        </div>
+        
+        {/* Mobile View Cart Floating Button */}
+        <div className="md:hidden absolute bottom-6 w-full px-6 flex justify-center z-30">
+          <button 
+            onClick={() => setMobileStep("cart")}
+            className="w-full max-w-sm py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg shadow-xl shadow-blue-500/30 flex items-center justify-center gap-2"
+          >
+            <ShoppingCart className="w-6 h-6" /> View Cart ({cart.length})
+          </button>
         </div>
       </div>
 
       {/* RIGHT PANE: Cart & Checkout (35%) */}
-      <div className="w-[35%] bg-white dark:bg-slate-900 flex flex-col shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.1)] z-20">
+      <div className={`w-full md:w-[35%] bg-white dark:bg-slate-900 flex-col shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.1)] z-20 ${mobileStep === 'cart' ? 'flex' : 'hidden md:flex'}`}>
         <div className="p-6 border-b border-slate-200 dark:border-slate-800">
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <ShoppingCart className="w-6 h-6" /> Current Bill
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <ShoppingCart className="w-6 h-6" /> Current Bill
+            </h2>
+            <button 
+              onClick={() => setMobileStep("search")}
+              className="md:hidden text-slate-500 hover:text-slate-900 dark:hover:text-white font-medium p-2 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center gap-1"
+            >
+              <Minus className="w-4 h-4 rotate-90" /> Back
+            </button>
+          </div>
           
           <select 
             value={pricingTier}
@@ -296,9 +359,28 @@ export default function POSPage() {
         title="Complete Checkout"
       >
         <div className="space-y-6">
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl flex justify-between items-center">
-            <span className="text-blue-800 dark:text-blue-300 font-medium text-lg">Total Due</span>
-            <span className="text-blue-700 dark:text-blue-400 font-bold text-3xl">Rs {cartTotal.toFixed(0)}</span>
+          
+          <div className="space-y-4">
+            <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+              <span>Gross Total</span>
+              <span>Rs {cartTotal.toFixed(0)}</span>
+            </div>
+            <div className="flex justify-between items-center bg-slate-100 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="font-medium text-slate-700 dark:text-slate-300">Discount (Rs)</span>
+              <input 
+                type="number"
+                value={discount}
+                onChange={(e) => setDiscount(Math.min(cartTotal, Math.max(0, Number(e.target.value))))}
+                min="0"
+                max={cartTotal}
+                className="w-32 p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-right font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl flex justify-between items-center border border-blue-100 dark:border-blue-900/30">
+            <span className="text-blue-800 dark:text-blue-300 font-medium text-lg">Net Total</span>
+            <span className="text-blue-700 dark:text-blue-400 font-bold text-3xl">Rs {(cartTotal - discount).toFixed(0)}</span>
           </div>
 
           <div className="flex gap-4 mb-6 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
@@ -318,7 +400,7 @@ export default function POSPage() {
             </button>
           </div>
 
-          {paymentMethod === "khata" && (
+          {paymentMethod === "khata" ? (
             <div className="space-y-4 mb-6">
               {!isCreatingCustomer ? (
                 <>
@@ -395,11 +477,23 @@ export default function POSPage() {
               </div>
               <div className="flex justify-between text-sm p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
                 <span className="text-slate-500">Remaining to add to Khata:</span>
-                <span className="font-bold text-red-500">Rs {(cartTotal - amountPaidNow).toFixed(0)}</span>
+                <span className="font-bold text-red-500">Rs {(cartTotal - discount - amountPaidNow).toFixed(0)}</span>
               </div>
+            </div>
+          ) : (
+            <div className="space-y-4 mb-6">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Temporary Customer Name (Optional)</label>
+              <input 
+                type="text"
+                value={temporaryCustomer}
+                onChange={(e) => setTemporaryCustomer(e.target.value)}
+                placeholder="Walk-in Customer Name"
+                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+              />
             </div>
           )}
 
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
           <button
             onClick={handleCheckout}
             disabled={isProcessing || (paymentMethod === "khata" && !selectedCustomerId)}
@@ -409,6 +503,14 @@ export default function POSPage() {
           </button>
         </div>
       </Modal>
+
+      {/* Invoice Receipt Modal */}
+      {showInvoice && lastInvoiceData && (
+        <InvoiceReceipt 
+          invoiceData={lastInvoiceData} 
+          onClose={() => setShowInvoice(false)} 
+        />
+      )}
     </div>
   );
 }

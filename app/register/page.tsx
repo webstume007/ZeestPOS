@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Modal } from "@/components/ui/Modal";
 import { useShift } from "@/hooks/useShift";
 import { CashTransaction, getShiftTransactions, addCashTransaction, getSetting } from "@/lib/db";
@@ -124,7 +123,6 @@ export default function CashRegister() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto h-full flex flex-col">
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Cash Register" }]} />
       
       <div className="flex justify-between items-center mb-8">
         <div>

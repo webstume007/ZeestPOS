@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Customer, getCustomers, createCustomer } from "@/lib/db";
 import { Modal } from "@/components/ui/Modal";
 import { Plus, ChevronRight, User } from "lucide-react";
@@ -46,7 +45,6 @@ export default function CustomerDirectory() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto h-full flex flex-col">
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Customer Accounts" }]} />
       
       <div className="flex justify-between items-center mb-8">
         <div>

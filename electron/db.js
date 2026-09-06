@@ -26,7 +26,16 @@ async function initDB() {
         retail_price NUMERIC,
         wholesale_shopkeeper_price NUMERIC,
         wholesale_customer_price NUMERIC,
-        is_deleted BOOLEAN DEFAULT FALSE
+        is_deleted BOOLEAN DEFAULT FALSE,
+        vendor_id UUID
+    );
+
+    CREATE TABLE IF NOT EXISTS vendors (
+        id UUID PRIMARY KEY,
+        name TEXT,
+        representative_name TEXT,
+        contact TEXT,
+        address TEXT
     );
 
     CREATE TABLE IF NOT EXISTS customers (
@@ -42,10 +51,13 @@ async function initDB() {
         invoice_id UUID PRIMARY KEY,
         timestamp TIMESTAMP DEFAULT NOW(),
         customer_id UUID REFERENCES customers(id) NULL,
+        customer_name TEXT,
         cashier_id TEXT,
         total_amount NUMERIC,
+        discount_amount NUMERIC DEFAULT 0,
         amount_paid NUMERIC,
-        payment_status TEXT
+        payment_status TEXT,
+        invoice_number TEXT
     );
 
     CREATE TABLE IF NOT EXISTS sale_items (
@@ -76,7 +88,7 @@ async function initDB() {
   console.log('Database schema verified/created successfully.');
 
   // Add updated_at columns and triggers if they don't exist
-  const tables = ['products', 'customers', 'sales', 'sale_items', 'cash_register'];
+  const tables = ['products', 'customers', 'sales', 'sale_items', 'cash_register', 'vendors'];
     
   for (const table of tables) {
     try {
@@ -90,6 +102,10 @@ async function initDB() {
   try {
     await db.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type TEXT DEFAULT 'Regular';`);
     await db.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
+    await db.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS vendor_id UUID;`);
+    await db.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name TEXT;`);
+    await db.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_amount NUMERIC DEFAULT 0;`);
+    await db.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_number TEXT;`);
   } catch (e) {}
 
   // PGlite trigger creation

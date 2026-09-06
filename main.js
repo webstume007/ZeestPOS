@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const net = require('net');
 const { initDB, queryDB } = require('./electron/db');
@@ -94,6 +95,22 @@ app.whenReady().then(async () => {
   });
 
   createWindow();
+
+  if (!isDev) {
+    autoUpdater.checkForUpdatesAndNotify();
+
+    autoUpdater.on('update-available', () => {
+      BrowserWindow.getAllWindows().forEach(w => w.webContents.send('update-available'));
+    });
+
+    autoUpdater.on('update-downloaded', () => {
+      BrowserWindow.getAllWindows().forEach(w => w.webContents.send('update-downloaded'));
+    });
+
+    ipcMain.on('restart-app', () => {
+      autoUpdater.quitAndInstall();
+    });
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { query } from './db';
 
-const TABLES = ['products', 'customers', 'sales', 'sale_items', 'cash_register', 'users'];
+const TABLES = ['products', 'customers', 'sales', 'sale_items', 'cash_register', 'users', 'vendors'];
 
 export async function syncDatabase(): Promise<void> {
   console.log('[Sync] Starting background sync...');
