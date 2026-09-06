@@ -56,12 +56,18 @@ async function initDB() {
     );
 
     CREATE TABLE IF NOT EXISTS cash_register (
-        shift_id UUID PRIMARY KEY,
-        cashier_id TEXT,
-        cash_in NUMERIC DEFAULT 0,
-        cash_out NUMERIC DEFAULT 0,
-        timestamp TIMESTAMP DEFAULT NOW(),
+        shift_id UUID REFERENCES shifts(id),
+        cashier_id UUID REFERENCES users(id),
+        cash_in NUMERIC(10, 2) DEFAULT 0,
+        cash_out NUMERIC(10, 2) DEFAULT 0,
+        timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
         reason TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at TIMESTAMP DEFAULT NOW()
     );
   `;
   
