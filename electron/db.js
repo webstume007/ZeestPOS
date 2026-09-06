@@ -20,6 +20,7 @@ async function initDB() {
         name_en TEXT,
         name_ur TEXT,
         category TEXT,
+        unit TEXT,
         buy_price NUMERIC,
         buy_time TIMESTAMP,
         current_stock INTEGER,
@@ -36,6 +37,15 @@ async function initDB() {
         representative_name TEXT,
         contact TEXT,
         address TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS stock_logs (
+        id UUID PRIMARY KEY,
+        product_id UUID REFERENCES products(id),
+        vendor_id UUID REFERENCES vendors(id),
+        quantity_added INTEGER,
+        buy_price NUMERIC,
+        timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS customers (
@@ -98,11 +108,21 @@ async function initDB() {
     }
   }
 
+  // Phase 10: Auth updates
+  try {
+    await db.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin TEXT;`);
+    await db.exec(`UPDATE users SET pin = '0000' WHERE pin IS NULL;`);
+  } catch (e) {
+    // Ignore if column exists
+  }
+
+
   // Add newly added column to web fallback dynamically just in case
   try {
     await db.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type TEXT DEFAULT 'Regular';`);
     await db.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
     await db.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS vendor_id UUID;`);
+    await db.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS unit TEXT;`);
     await db.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name TEXT;`);
     await db.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_amount NUMERIC DEFAULT 0;`);
     await db.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_number TEXT;`);

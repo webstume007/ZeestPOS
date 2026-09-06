@@ -5,10 +5,11 @@ import { authenticateUser, User } from "@/lib/db";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useSync } from "@/hooks/useSync";
 import { RefreshCw, User as UserIcon, KeyRound, AlertCircle } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
-  const [cnic, setCnic] = useState("");
+  const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -20,11 +21,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const user = await authenticateUser(username, cnic);
+      const user = await authenticateUser(username, pin);
       if (user) {
         login(user);
       } else {
-        setError("Invalid username or CNIC. Please check your credentials.");
+        setError("Invalid username or PIN. Please check your credentials.");
       }
     } catch (err) {
       console.error(err);
@@ -39,7 +40,9 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 p-8 space-y-8">
         
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-blue-600 dark:text-blue-400">ZeestPOS</h1>
+          <div className="flex justify-center mb-6">
+            <Logo className="h-10 w-auto" />
+          </div>
           <p className="text-slate-500 dark:text-slate-400">Enter your credentials to continue</p>
         </div>
 
@@ -69,18 +72,20 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">CNIC Number</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">PIN (4 Digits)</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <KeyRound className="h-5 w-5 text-slate-400" />
               </div>
               <input
-                type="text"
+                type="password"
                 required
-                value={cnic}
-                onChange={(e) => setCnic(e.target.value)}
+                pattern="\d{4}"
+                maxLength={4}
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all dark:text-slate-100"
-                placeholder="00000-0000000-0"
+                placeholder="0000"
               />
             </div>
           </div>

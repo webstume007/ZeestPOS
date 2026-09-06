@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Package, History, Users, MonitorSpeaker, Settings, Cloud, CloudOff, RefreshCw, DownloadCloud } from 'lucide-react';
+import { LayoutDashboard, Package, History, Users, MonitorSpeaker, Settings, Cloud, CloudOff, RefreshCw, DownloadCloud, Truck } from 'lucide-react';
 import { useSync } from '@/hooks/useSync';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { Logo } from '@/components/ui/Logo';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -38,7 +39,7 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full">
       <div className="p-6">
-        <h1 className="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400">ZeestPOS</h1>
+        <Logo className="w-32 h-auto" />
       </div>
       <nav className="flex-1 px-4 space-y-2">
         <Link href="/" className="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -56,6 +57,10 @@ export function Sidebar() {
         <Link href="/customers" className="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
           <Users className="w-5 h-5" />
           <span className="font-medium">Customers</span>
+        </Link>
+        <Link href="/vendors" className="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <Truck className="w-5 h-5" />
+          <span className="font-medium">Vendors</span>
         </Link>
         <Link href="/register" className="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
           <MonitorSpeaker className="w-5 h-5" />

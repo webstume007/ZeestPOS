@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ShoppingCart, Package, Menu, X, History, Users, MonitorSpeaker, Settings } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Package, Menu, X, History, Users, MonitorSpeaker, Settings, Truck } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { Logo } from "@/components/ui/Logo";
 
 export function MobileNav() {
   const pathname = usePathname();
@@ -57,9 +58,9 @@ export function MobileNav() {
           />
           
           {/* Drawer Content */}
-          <div className="relative w-72 max-w-[80vw] bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col transform transition-transform animate-in slide-in-from-left">
+          <div className="relative ml-auto w-72 max-w-[80vw] bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col transform transition-transform animate-in slide-in-from-right">
             <div className="p-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
-              <h2 className="text-xl font-bold tracking-tight text-blue-600 dark:text-blue-400">ZeestPOS</h2>
+              <Logo className="w-24 h-auto" />
               <button 
                 onClick={() => setIsDrawerOpen(false)}
                 className="p-2 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
@@ -84,6 +85,14 @@ export function MobileNav() {
               >
                 <Users className="w-5 h-5" />
                 <span className="font-medium">Customers</span>
+              </Link>
+              <Link 
+                href="/vendors" 
+                onClick={() => setIsDrawerOpen(false)}
+                className="flex items-center gap-3 px-3 py-3 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                <Truck className="w-5 h-5" />
+                <span className="font-medium">Vendors</span>
               </Link>
               <Link 
                 href="/register" 

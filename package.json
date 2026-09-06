@@ -1,8 +1,8 @@
 {
-  "name": "zeestpos",
-  "version": "0.1.0",
+  "name": "bajwastore",
+  "version": "1.0.1",
   "private": true,
-  "main": "main.js",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently \"npm run next:dev\" \"npm run electron:dev\"",
     "next:dev": "next dev",
@@ -13,15 +13,19 @@
     "lint": "eslint"
   },
   "build": {
-    "appId": "com.zeestpos.app",
+    "appId": "com.bajwastore.app",
     "win": {
-      "target": ["nsis"]
+      "target": [
+        "nsis"
+      ]
     },
-    "publish": [{
-      "provider": "github",
-      "owner": "webstume007",
-      "repo": "ZeestPOS"
-    }]
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "webstume007",
+        "repo": "ZeestPOS"
+      }
+    ]
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
@@ -29,6 +33,7 @@
     "date-fns": "^4.4.0",
     "electron-is-dev": "^3.0.1",
     "electron-updater": "^6.8.9",
+    "fuse.js": "^7.5.0",
     "html2canvas": "^1.4.1",
     "lucide-react": "^1.41.0",
     "next": "16.3.4",

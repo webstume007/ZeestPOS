@@ -33,7 +33,7 @@ export function InvoiceReceipt({ invoiceData, onClose }: InvoiceReceiptProps) {
           await navigator.share({
             files: [file],
             title: `Invoice ${invoiceData.invoice_number}`,
-            text: `Here is your invoice ${invoiceData.invoice_number} from ZeestPOS.`,
+            text: `Here is your invoice ${invoiceData.invoice_number} from BajwaStore.`,
           });
         } else {
           // Fallback: download the image
@@ -112,9 +112,9 @@ export function InvoiceReceipt({ invoiceData, onClose }: InvoiceReceiptProps) {
             ref={receiptRef} 
             className="bg-white w-full max-w-[350px] p-6 shadow-sm font-mono text-slate-900"
           >
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold tracking-tight">ZeestPOS</h1>
-              <p className="text-xs text-slate-500 mt-1">Thank you for your purchase!</p>
+            <div className="flex flex-col items-center border-b border-black pb-4 mb-4">
+              <h1 className="text-2xl font-bold tracking-tight mb-1">BajwaStore</h1>
+              <p className="text-xs text-gray-500">Invoice #{invoiceData.invoice_number}</p>
             </div>
             
             <div className="text-xs space-y-1 mb-6 border-b border-dashed border-slate-300 pb-4">

@@ -3,13 +3,18 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { ProductForm } from "@/components/stock/ProductForm";
+import { AddStockForm } from "@/components/stock/AddStockForm";
+import { CategoryManager } from "@/components/stock/CategoryManager";
 import { getProducts, deleteProduct, Product } from "@/lib/db";
-import { Plus, Edit2, Trash2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Tag, ArrowUpCircle } from "lucide-react";
 
 export default function StockManagement() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [stockProduct, setStockProduct] = useState<Product | undefined>();
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchProducts = async () => {
@@ -27,19 +32,30 @@ export default function StockManagement() {
     fetchProducts();
   }, []);
 
-  const handleOpenModal = (product?: Product) => {
+  const handleOpenProductModal = (product?: Product) => {
     setEditingProduct(product);
-    setIsModalOpen(true);
+    setIsProductModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleCloseProductModal = () => {
+    setIsProductModalOpen(false);
     setEditingProduct(undefined);
+  };
+
+  const handleOpenStockModal = (product: Product) => {
+    setStockProduct(product);
+    setIsStockModalOpen(true);
+  };
+
+  const handleCloseStockModal = () => {
+    setIsStockModalOpen(false);
+    setStockProduct(undefined);
   };
 
   const handleSuccess = () => {
     fetchProducts();
-    handleCloseModal();
+    handleCloseProductModal();
+    handleCloseStockModal();
   };
 
   const handleDelete = async (id: string) => {
@@ -61,13 +77,22 @@ export default function StockManagement() {
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Inventory</h1>
           <p className="text-slate-500 mt-2">Manage your product stock and pricing.</p>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm"
-        >
-          <Plus className="w-5 h-5" />
-          Add Product
-        </button>
+        <div className="flex items-center gap-3">
+            <button
+            onClick={() => setIsCategoryModalOpen(true)}
+            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm"
+            >
+            <Tag className="w-5 h-5" />
+            Categories
+            </button>
+            <button
+            onClick={() => handleOpenProductModal()}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm"
+            >
+            <Plus className="w-5 h-5" />
+            Add Product
+            </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm flex-1 overflow-hidden flex flex-col">
@@ -108,14 +133,23 @@ export default function StockManagement() {
                     <td className="px-6 py-4 text-blue-600 dark:text-blue-400 font-medium">{Number(product.retail_price).toFixed(2)}</td>
                     <td className="px-6 py-4 flex items-center justify-end gap-2">
                       <button 
-                        onClick={() => handleOpenModal(product)}
+                        onClick={() => handleOpenStockModal(product)}
+                        className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
+                        title="Add Stock"
+                      >
+                        <ArrowUpCircle className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleOpenProductModal(product)}
                         className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                        title="Edit Product"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => handleDelete(product.id)}
                         className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                        title="Delete Product"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -129,15 +163,37 @@ export default function StockManagement() {
       </div>
 
       <Modal 
-        isOpen={isModalOpen} 
-        onClose={handleCloseModal} 
+        isOpen={isProductModalOpen} 
+        onClose={handleCloseProductModal} 
         title={editingProduct ? "Edit Product" : "Add New Product"}
       >
         <ProductForm 
           initialData={editingProduct} 
           onSuccess={handleSuccess} 
-          onCancel={handleCloseModal} 
+          onCancel={handleCloseProductModal} 
         />
+      </Modal>
+
+      <Modal 
+        isOpen={isStockModalOpen} 
+        onClose={handleCloseStockModal} 
+        title="Add Stock"
+      >
+        {stockProduct && (
+          <AddStockForm 
+            product={stockProduct} 
+            onSuccess={handleSuccess} 
+            onCancel={handleCloseStockModal} 
+          />
+        )}
+      </Modal>
+
+      <Modal 
+        isOpen={isCategoryModalOpen} 
+        onClose={() => setIsCategoryModalOpen(false)} 
+        title="Manage Categories"
+      >
+        <CategoryManager />
       </Modal>
     </div>
   );

@@ -87,31 +87,20 @@ export default function CashRegister() {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user?.username) {
-      setSelectedCashier(user.username);
+    if (user?.username && (!shiftId || !cashierId)) {
+      startShift(user.username);
     }
-  }, [user]);
+  }, [user, shiftId, cashierId, startShift]);
 
   if (!shiftId || !cashierId) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8 bg-slate-50 dark:bg-slate-950">
         <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-md w-full text-center">
           <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-6">
-            <MonitorSpeaker className="w-10 h-10" />
+            <MonitorSpeaker className="w-10 h-10 animate-pulse" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Start a Shift</h1>
-          <p className="text-slate-500 mb-8">You are logged in as <span className="font-bold text-slate-700 dark:text-slate-300">{selectedCashier}</span>. Open the cash register to begin logging sales.</p>
-          
-          <form onSubmit={handleStartShift} className="space-y-6 text-left">
-            <button
-              type="submit"
-              disabled={!selectedCashier}
-              className="w-full py-4 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-md flex items-center justify-center gap-2"
-            >
-              <CheckCircle2 className="w-5 h-5" />
-              Open Register as {selectedCashier}
-            </button>
-          </form>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Starting Shift...</h1>
+          <p className="text-slate-500 mb-8">Opening register for <span className="font-bold text-slate-700 dark:text-slate-300">{user?.username || "Cashier"}</span>.</p>
         </div>
       </div>
     );

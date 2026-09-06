@@ -16,6 +16,7 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
     name_en: initialData?.name_en || "",
     name_ur: initialData?.name_ur || "",
     category: initialData?.category || "General",
+    unit: initialData?.unit || "pcs",
     current_stock: initialData?.current_stock || 0,
     buy_price: initialData?.buy_price || 0,
     retail_price: initialData?.retail_price || 0,
@@ -23,6 +24,8 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
     wholesale_customer_price: initialData?.wholesale_customer_price || 0,
     vendor_id: initialData?.vendor_id || "",
   });
+
+  const unitOptions = ["pcs", "Ltr", "ml", "kg", "g", "size", "pack", "box"];
 
   const [categories, setCategories] = useState<string[]>(["General"]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -124,7 +127,7 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Category</label>
           <select
@@ -135,6 +138,20 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
           >
             {categories.map((cat) => (
               <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Unit</label>
+          <select
+            name="unit"
+            value={formData.unit}
+            onChange={handleChange}
+            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+          >
+            {unitOptions.map((u) => (
+              <option key={u} value={u}>{u}</option>
             ))}
           </select>
         </div>
@@ -195,50 +212,39 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Category</label>
-          <select
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-          >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Current Stock</label>
-          <input
-            type="number"
-            name="current_stock"
-            value={formData.current_stock}
-            onChange={handleChange}
-            required
-            min="0"
-            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-          />
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Buy Price</label>
-          <input
-            type="number"
-            name="buy_price"
-            value={formData.buy_price}
-            onChange={handleChange}
-            required
-            min="0"
-            step="0.01"
-            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-          />
+      {!initialData && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Initial Stock</label>
+            <input
+              type="number"
+              name="current_stock"
+              value={formData.current_stock}
+              onChange={handleChange}
+              required
+              min="0"
+              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Buy Price</label>
+            <input
+              type="number"
+              name="buy_price"
+              value={formData.buy_price}
+              onChange={handleChange}
+              required
+              min="0"
+              step="0.01"
+              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            />
+          </div>
         </div>
-        
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Retail Price</label>
           <input

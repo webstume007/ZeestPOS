@@ -4,6 +4,7 @@ export interface Product {
     name_en: string | null;
     name_ur: string | null;
     category: string | null;
+    unit?: string | null;
     buy_price: number | null;
     buy_time: string | null;
     current_stock: number | null;
@@ -20,6 +21,17 @@ export interface Vendor {
     representative_name: string | null;
     contact: string | null;
     address: string | null;
+}
+
+export interface StockLog {
+    id: string;
+    product_id: string;
+    vendor_id: string;
+    quantity_added: number;
+    buy_price: number;
+    timestamp: string;
+    product_name?: string;
+    vendor_name?: string;
 }
 
 export interface Customer {
@@ -65,6 +77,7 @@ export interface User {
     id: string;
     username: string;
     cnic: string;
+    pin: string;
     role: string;
 }
 
@@ -116,8 +129,8 @@ export async function getUsers(): Promise<User[]> {
     return await query<User>("SELECT * FROM users ORDER BY username ASC");
 }
 
-export async function authenticateUser(username: string, cnic: string): Promise<User | null> {
-    const users = await query<User>("SELECT * FROM users WHERE username = $1 AND cnic = $2", [username, cnic]);
+export async function authenticateUser(username: string, pin: string): Promise<User | null> {
+    const users = await query<User>("SELECT * FROM users WHERE username = $1 AND pin = $2", [username, pin]);
     return users.length > 0 ? users[0] : null;
 }
 
@@ -227,6 +240,7 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
           id UUID PRIMARY KEY,
           username TEXT,
           cnic TEXT UNIQUE,
+          pin TEXT DEFAULT '0000',
           role TEXT DEFAULT 'Cashier',
           updated_at TIMESTAMP DEFAULT NOW()
         );
@@ -250,8 +264,19 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
         await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_number TEXT;`);
         await browserDb.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type TEXT DEFAULT 'Regular';`);
         await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
+        await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS unit TEXT;`);
         await browserDb.exec(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMP DEFAULT NOW());`);
-        await browserDb.exec(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, username TEXT, cnic TEXT UNIQUE, role TEXT DEFAULT 'Cashier', updated_at TIMESTAMP DEFAULT NOW());`);
+        await browserDb.exec(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, username TEXT, cnic TEXT UNIQUE, pin TEXT DEFAULT '0000', role TEXT DEFAULT 'Cashier', updated_at TIMESTAMP DEFAULT NOW());`);
+        await browserDb.exec(`
+          CREATE TABLE IF NOT EXISTS stock_logs (
+            id UUID PRIMARY KEY,
+            product_id UUID REFERENCES products(id),
+            vendor_id UUID REFERENCES vendors(id),
+            quantity_added INTEGER,
+            buy_price NUMERIC,
+            timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+          );
+        `);
       } catch (e: any) {
         console.error("Failed to initialize browser DB", e);
         if (typeof window !== 'undefined') alert(`DB Boot Error: ${e.message}`);
@@ -276,26 +301,34 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
   throw new Error('Database access is not available in this environment.');
 }
 
+import { getCache, setCache, clearCache } from "./cache";
+
 // Product CRUD
 export async function getProducts(): Promise<Product[]> {
-    return await query<Product>('SELECT * FROM products WHERE is_deleted IS NOT TRUE ORDER BY name_en ASC');
+    const cached = getCache<Product[]>('all_products');
+    if (cached) return cached;
+    
+    const products = await query<Product>('SELECT * FROM products WHERE is_deleted IS NOT TRUE ORDER BY name_en ASC');
+    setCache('all_products', products);
+    return products;
 }
 
 export async function createProduct(product: Omit<Product, 'id'>): Promise<Product> {
     const sql = `
         INSERT INTO products (
-            id, name_en, name_ur, category, buy_price, buy_time, current_stock,
+            id, name_en, name_ur, category, unit, buy_price, buy_time, current_stock,
             retail_price, wholesale_shopkeeper_price, wholesale_customer_price, vendor_id
         ) VALUES (
-            gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+            gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
         ) RETURNING *
     `;
     const params = [
-        product.name_en, product.name_ur, product.category, product.buy_price,
+        product.name_en, product.name_ur, product.category, product.unit || null, product.buy_price,
         product.buy_time, product.current_stock, product.retail_price,
         product.wholesale_shopkeeper_price, product.wholesale_customer_price, product.vendor_id || null
     ];
     const rows = await query<Product>(sql, params);
+    clearCache('all_products');
     return rows[0];
 }
 
@@ -317,6 +350,37 @@ export async function createVendor(vendor: Omit<Vendor, 'id'>): Promise<Vendor> 
     ];
     const rows = await query<Vendor>(sql, params);
     return rows[0];
+}
+
+export async function addStockLog(productId: string, vendorId: string, quantity: number, buyPrice: number): Promise<void> {
+    const sql = `
+        INSERT INTO stock_logs (id, product_id, vendor_id, quantity_added, buy_price)
+        VALUES (gen_random_uuid(), $1, $2, $3, $4)
+    `;
+    await query(sql, [productId, vendorId, quantity, buyPrice]);
+    
+    // Also update product's buy_price and stock
+    await query(`
+        UPDATE products 
+        SET current_stock = COALESCE(current_stock, 0) + $1, 
+            buy_price = $2, 
+            vendor_id = $3,
+            updated_at = NOW()
+        WHERE id = $4
+    `, [quantity, buyPrice, vendorId, productId]);
+    
+    clearCache('all_products');
+}
+
+export async function getVendorStockHistory(vendorId: string): Promise<StockLog[]> {
+    return await query<StockLog>(`
+        SELECT s.*, p.name_en as product_name, v.name as vendor_name 
+        FROM stock_logs s
+        JOIN products p ON s.product_id = p.id
+        JOIN vendors v ON s.vendor_id = v.id
+        WHERE s.vendor_id = $1
+        ORDER BY s.timestamp DESC
+    `, [vendorId]);
 }
 
 // Customer CRUD
@@ -342,11 +406,13 @@ export async function updateProduct(id: string, product: Partial<Product>): Prom
     `;
     
     const rows = await query<Product>(sql, params);
+    clearCache('all_products');
     return rows[0];
 }
 
 export async function deleteProduct(id: string): Promise<void> {
     await query('UPDATE products SET is_deleted = TRUE, updated_at = NOW() WHERE id = $1', [id]);
+    clearCache('all_products');
 }
 
 export async function getCustomers(): Promise<Customer[]> {

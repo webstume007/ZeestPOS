@@ -19,8 +19,8 @@ const notourdu = Noto_Nastaliq_Urdu({
 });
 
 export const metadata: Metadata = {
-  title: "ZeestPOS",
-  description: "Modern Local-First POS System",
+  title: "BajwaStore",
+  description: "Modern POS and Khata Management System",
 };
 
 export default function RootLayout({
