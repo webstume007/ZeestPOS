@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm run next:dev\" \"npm run electron:dev\"",
     "next:dev": "next dev",
     "electron:dev": "electron .",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },
