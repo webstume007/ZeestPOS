@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Product, Customer, getProducts, getCustomers, processCheckout } from "@/lib/db";
+import { Product, Customer, getProducts, getCustomers, processCheckout, createCustomer } from "@/lib/db";
 import { Search, ShoppingCart, Plus, Minus, X, CheckCircle2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { useShift } from "@/hooks/useShift";
@@ -22,6 +22,11 @@ export default function POSPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [amountPaidNow, setAmountPaidNow] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // New Customer State
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ full_name: "", whatsapp_number: "", address: "", customer_type: "Regular" });
+  const [isSavingCustomer, setIsSavingCustomer] = useState(false);
 
   const { shiftId, cashierId } = useShift();
 
@@ -73,6 +78,23 @@ export default function POSPage() {
 
   const removeFromCart = (productId: string) => {
     setCart(prev => prev.filter(item => item.product.id !== productId));
+  };
+
+  const handleCreateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingCustomer(true);
+    try {
+      const created = await createCustomer(newCustomer);
+      const updatedCustomers = await getCustomers();
+      setCustomers(updatedCustomers);
+      setSelectedCustomerId(created.id);
+      setIsCreatingCustomer(false);
+      setNewCustomer({ full_name: "", whatsapp_number: "", address: "", customer_type: "Regular" });
+    } catch (error) {
+      console.error("Failed to create customer:", error);
+    } finally {
+      setIsSavingCustomer(false);
+    }
   };
 
   const handleCheckout = async () => {
@@ -279,46 +301,87 @@ export default function POSPage() {
             <span className="text-blue-700 dark:text-blue-400 font-bold text-3xl">Rs {cartTotal.toFixed(0)}</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="flex gap-4 mb-6 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
             <button
+              type="button"
               onClick={() => setPaymentMethod("cash")}
-              className={`p-4 rounded-2xl border-2 transition-all font-semibold flex flex-col items-center justify-center gap-2 ${
-                paymentMethod === "cash" 
-                  ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300" 
-                  : "border-slate-200 dark:border-slate-700 hover:border-blue-300 text-slate-600 dark:text-slate-400"
-              }`}
+              className={`flex-1 py-2.5 rounded-lg font-medium transition-colors ${paymentMethod === "cash" ? "bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
             >
-              <CheckCircle2 className={`w-6 h-6 ${paymentMethod === "cash" ? "text-blue-600" : "text-transparent"}`} />
               Pay Full Cash
             </button>
             <button
+              type="button"
               onClick={() => setPaymentMethod("khata")}
-              className={`p-4 rounded-2xl border-2 transition-all font-semibold flex flex-col items-center justify-center gap-2 ${
-                paymentMethod === "khata" 
-                  ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300" 
-                  : "border-slate-200 dark:border-slate-700 hover:border-indigo-300 text-slate-600 dark:text-slate-400"
-              }`}
+              className={`flex-1 py-2.5 rounded-lg font-medium transition-colors ${paymentMethod === "khata" ? "bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
             >
-              <CheckCircle2 className={`w-6 h-6 ${paymentMethod === "khata" ? "text-indigo-600" : "text-transparent"}`} />
-              Add to Account (Khata)
+              Add to Khata
             </button>
           </div>
 
           {paymentMethod === "khata" && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-200">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Select Customer</label>
-                <select 
-                  value={selectedCustomerId}
-                  onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                >
-                  <option value="" disabled>Select a customer...</option>
-                  {customers.map(c => (
-                    <option key={c.id} value={c.id}>{c.full_name} ({c.whatsapp_number})</option>
-                  ))}
-                </select>
-              </div>
+            <div className="space-y-4 mb-6">
+              {!isCreatingCustomer ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Select Customer</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatingCustomer(true)}
+                      className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" /> New Customer
+                    </button>
+                  </div>
+                  <select
+                    value={selectedCustomerId}
+                    onChange={(e) => setSelectedCustomerId(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="" disabled>Choose a customer...</option>
+                    {customers.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+                  </select>
+                </>
+              ) : (
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">Create New Customer</h4>
+                    <button type="button" onClick={() => setIsCreatingCustomer(false)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Full Name"
+                    value={newCustomer.full_name}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, full_name: e.target.value })}
+                    className="w-full p-2.5 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="WhatsApp (Optional)"
+                      value={newCustomer.whatsapp_number}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, whatsapp_number: e.target.value })}
+                      className="w-1/2 p-2.5 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none"
+                    />
+                    <select
+                      value={newCustomer.customer_type}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, customer_type: e.target.value })}
+                      className="w-1/2 p-2.5 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none"
+                    >
+                      <option value="Regular">Regular</option>
+                      <option value="Wholesale">Wholesale</option>
+                      <option value="Sale Customer">Sale</option>
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!newCustomer.full_name || isSavingCustomer}
+                    onClick={handleCreateCustomer}
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50"
+                  >
+                    {isSavingCustomer ? "Saving..." : "Save Customer"}
+                  </button>
+                </div>
+              )}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Amount Paid Now (Rs)</label>
                 <input 
