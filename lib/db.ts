@@ -137,23 +137,27 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
       try {
         await browserDb.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type TEXT DEFAULT 'Regular';`);
         await browserDb.exec(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMP DEFAULT NOW());`);
-      } catch (e) {}
-
-      // Insert a dummy product for testing if empty
-      const { rows } = await browserDb.query('SELECT COUNT(*) as count FROM products');
-      if (Number(rows[0].count) === 0) {
-        await browserDb.query(`
-          INSERT INTO products (id, name_en, name_ur, category, buy_price, current_stock, retail_price) 
-          VALUES ('451db687-f4d3-4e86-9dc6-99417ca2da26', 'Test Product (Web)', 'ٹیسٹ پروڈکٹ', 'General', 10.0, 100, 15.0)
-        `);
+      } catch (e: any) {
+        console.error("Failed to initialize browser DB", e);
+        if (typeof window !== 'undefined') alert(`DB Boot Error: ${e.message}`);
+        throw e;
       }
     }
     
-    // Convert named parameters to positional if using any complex dialect differences, but PGlite syntax is the same
-    const result = await browserDb.query(sql, params);
-    return result.rows as T[];
+    // Execute query on the browser fallback DB
+    try {
+      const result = await browserDb.query(sql, params);
+      return result.rows as T[];
+    } catch (e: any) {
+      console.error("Browser DB Query Error:", e);
+      if (typeof window !== 'undefined') alert(`DB Query Error: ${e.message}`);
+      throw e;
+    }
   }
 
+  // 3. Fallback if something went wrong
+  console.error("Database connection not available.");
+  if (typeof window !== 'undefined') alert("Database connection not available.");
   throw new Error('Database access is not available in this environment.');
 }
 
@@ -324,17 +328,17 @@ export async function addCashTransaction(
 
 // Settings CRUD
 export async function getSetting(key: string, defaultValue: string = ""): Promise<string> {
-    const sql = "SELECT value FROM settings WHERE key = $1";
+    const sql = `SELECT value FROM settings WHERE key = $1`;
     const rows = await query<{ value: string }>(sql, [key]);
     return rows.length > 0 ? rows[0].value : defaultValue;
 }
 
 export async function updateSetting(key: string, value: string): Promise<void> {
-    const sql = "
+    const sql = `
         INSERT INTO settings (key, value) 
         VALUES ($1, $2)
         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
-    ";
+    `;
     await query(sql, [key, value]);
 }
 
