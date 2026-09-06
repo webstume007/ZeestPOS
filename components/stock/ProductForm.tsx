@@ -21,7 +21,6 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
     buy_price: initialData?.buy_price || 0,
     retail_price: initialData?.retail_price || 0,
     wholesale_shopkeeper_price: initialData?.wholesale_shopkeeper_price || 0,
-    wholesale_customer_price: initialData?.wholesale_customer_price || 0,
     vendor_id: initialData?.vendor_id || "",
   });
 

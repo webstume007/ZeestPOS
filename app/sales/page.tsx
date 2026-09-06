@@ -27,6 +27,7 @@ export default function SalesHistory() {
 
   const filteredSales = sales.filter(s => 
     s.invoice_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (s.customer_name && s.customer_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (s.cashier_id && s.cashier_id.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
@@ -55,16 +56,16 @@ export default function SalesHistory() {
         </header>
 
         <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
                 <tr>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Invoice ID</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Client</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date & Time</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Amount</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Paid</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cashier</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -89,6 +90,9 @@ export default function SalesHistory() {
                           {sale.invoice_id.split("-")[0]}...
                         </span>
                       </td>
+                      <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                        {sale.customer_name || "Walk-in"}
+                      </td>
                       <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                         {sale.timestamp ? format(new Date(sale.timestamp), "MMM d, yyyy h:mm a") : "Unknown"}
                       </td>
@@ -107,14 +111,56 @@ export default function SalesHistory() {
                           {sale.payment_status === "paid" ? "Paid" : "Khata"}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                        {sale.cashier_id || "Unknown"}
-                      </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile View: Stacked Cards */}
+          <div className="md:hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
+            {loading ? (
+              <div className="p-8 text-center text-slate-500">Loading sales history...</div>
+            ) : filteredSales.length === 0 ? (
+              <div className="p-8 flex flex-col items-center justify-center text-slate-500">
+                <FileText className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-3" />
+                <p>No sales records found.</p>
+              </div>
+            ) : (
+              filteredSales.map((sale) => (
+                <div key={sale.invoice_id} className="p-4 flex flex-col gap-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="font-mono text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md mb-2 inline-block">
+                        {sale.invoice_id.split("-")[0]}...
+                      </span>
+                      <h4 className="font-bold text-slate-900 dark:text-white">{sale.customer_name || "Walk-in"}</h4>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {sale.timestamp ? format(new Date(sale.timestamp), "MMM d, h:mm a") : "Unknown"}
+                      </p>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                      sale.payment_status === "paid" 
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        : "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                    }`}>
+                      {sale.payment_status === "paid" ? "Paid" : "Khata"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-end border-t border-slate-100 dark:border-slate-800 pt-3">
+                    <div>
+                      <p className="text-xs text-slate-500 mb-0.5">Paid Amount</p>
+                      <p className="font-medium text-slate-700 dark:text-slate-300">Rs {Number(sale.amount_paid).toFixed(0)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-slate-500 mb-0.5">Total</p>
+                      <p className="font-bold text-slate-900 dark:text-white">Rs {Number(sale.total_amount).toFixed(0)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </section>
       </div>

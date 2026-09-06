@@ -26,7 +26,6 @@ async function initDB() {
         current_stock INTEGER,
         retail_price NUMERIC,
         wholesale_shopkeeper_price NUMERIC,
-        wholesale_customer_price NUMERIC,
         is_deleted BOOLEAN DEFAULT FALSE,
         vendor_id UUID
     );

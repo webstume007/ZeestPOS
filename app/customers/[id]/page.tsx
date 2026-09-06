@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { Customer, Sale, getCustomer, getCustomerSales, receiveKhataPayment } from "@/lib/db";
+import { Customer, Sale, getCustomer, getCustomerSales, receiveKhataPayment, giveKhataLoan } from "@/lib/db";
 import { Modal } from "@/components/ui/Modal";
-import { User, Receipt, Banknote, History, Wallet } from "lucide-react";
+import { User, Receipt, Banknote, History, Wallet, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { format } from "date-fns";
 import { useShift } from "@/hooks/useShift";
 
@@ -14,9 +14,14 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
+  
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [processingPayment, setProcessingPayment] = useState(false);
+
+  const [isGiveModalOpen, setIsGiveModalOpen] = useState(false);
+  const [giveAmount, setGiveAmount] = useState<number>(0);
+  const [processingGive, setProcessingGive] = useState(false);
 
   const { shiftId, cashierId } = useShift();
 
@@ -58,6 +63,27 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
     }
   };
 
+  const handleGiveLoan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customer || giveAmount <= 0) return;
+    if (!shiftId || !cashierId) {
+      alert("No active shift found. Please start a shift from the Cash Register.");
+      return;
+    }
+    
+    setProcessingGive(true);
+    try {
+      await giveKhataLoan(customer.id, giveAmount, customer.full_name || "Unknown", shiftId, cashierId);
+      setIsGiveModalOpen(false);
+      setGiveAmount(0);
+      fetchCustomerData(); // Refresh balance
+    } catch (error) {
+      console.error("Loan processing failed:", error);
+    } finally {
+      setProcessingGive(false);
+    }
+  };
+
   if (loading) return <div className="p-8">Loading customer profile...</div>;
   if (!customer) return <div className="p-8">Customer not found.</div>;
 
@@ -86,7 +112,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
           </div>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-2xl flex items-center gap-6 min-w-[300px]">
+        <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-2xl flex flex-col sm:flex-row items-center gap-6 min-w-[300px]">
           <div>
             <p className="text-sm font-medium text-slate-500 mb-1 flex items-center gap-2">
               <Wallet className="w-4 h-4" /> Total Khata Pending
@@ -95,14 +121,21 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
               Rs {balance.toFixed(0)}
             </p>
           </div>
-          <button
-            onClick={() => setIsPaymentModalOpen(true)}
-            disabled={balance <= 0}
-            className="ml-auto flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white px-5 py-3 rounded-xl font-semibold transition-colors shadow-sm disabled:cursor-not-allowed"
-          >
-            <Banknote className="w-5 h-5" />
-            Receive
-          </button>
+          <div className="flex flex-col gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setIsPaymentModalOpen(true)}
+              disabled={balance <= 0}
+              className="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors whitespace-nowrap flex items-center justify-center gap-2 shadow-sm"
+            >
+              <ArrowDownRight className="w-4 h-4" /> Receive
+            </button>
+            <button
+              onClick={() => setIsGiveModalOpen(true)}
+              className="w-full sm:w-auto px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition-colors whitespace-nowrap flex items-center justify-center gap-2 shadow-sm"
+            >
+              <ArrowUpRight className="w-4 h-4" /> Give
+            </button>
+          </div>
         </div>
       </div>
 
@@ -158,13 +191,8 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      <Modal isOpen={isPaymentModalOpen} onClose={() => !processingPayment && setIsPaymentModalOpen(false)} title="Receive Khata Payment">
+      <Modal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} title="Receive Khata Payment">
         <form onSubmit={handleReceivePayment} className="space-y-6">
-          <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-2xl mb-6 flex justify-between items-center">
-            <span className="text-slate-500 font-medium">Pending Balance</span>
-            <span className="text-2xl font-bold text-red-500">Rs {balance.toFixed(0)}</span>
-          </div>
-
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Amount Received (Rs)</label>
             <input
@@ -174,27 +202,58 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
               max={balance}
               value={paymentAmount || ""}
               onChange={(e) => setPaymentAmount(Number(e.target.value))}
-              className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none text-2xl font-bold"
-              placeholder="0"
+              className="w-full p-4 text-xl rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none font-bold"
             />
+            <p className="text-xs text-slate-500">Maximum receivable: Rs {balance.toFixed(0)}</p>
           </div>
-
           <div className="flex justify-end gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={() => setIsPaymentModalOpen(false)}
               disabled={processingPayment}
-              className="px-6 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="px-6 py-2.5 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={processingPayment || paymentAmount <= 0}
-              className="px-8 py-3 rounded-xl font-bold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
+              className="px-6 py-2.5 rounded-xl font-medium bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm disabled:opacity-50"
             >
-              <Banknote className="w-5 h-5" />
-              {processingPayment ? "Processing..." : "Confirm Payment"}
+              {processingPayment ? "Processing..." : "Confirm Receipt"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={isGiveModalOpen} onClose={() => setIsGiveModalOpen(false)} title="Give Loan / Credit">
+        <form onSubmit={handleGiveLoan} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Amount Given (Rs)</label>
+            <input
+              type="number"
+              required
+              min="1"
+              value={giveAmount || ""}
+              onChange={(e) => setGiveAmount(Number(e.target.value))}
+              className="w-full p-4 text-xl rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none font-bold"
+            />
+          </div>
+          <div className="flex justify-end gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setIsGiveModalOpen(false)}
+              disabled={processingGive}
+              className="px-6 py-2.5 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={processingGive || giveAmount <= 0}
+              className="px-6 py-2.5 rounded-xl font-medium bg-red-600 text-white hover:bg-red-700 shadow-sm disabled:opacity-50"
+            >
+              {processingGive ? "Processing..." : "Confirm Loan"}
             </button>
           </div>
         </form>

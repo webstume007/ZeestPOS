@@ -10,7 +10,6 @@ export interface Product {
     current_stock: number | null;
     retail_price: number | null;
     wholesale_shopkeeper_price: number | null;
-    wholesale_customer_price: number | null;
     is_deleted?: boolean | null;
     vendor_id?: string | null;
 }
@@ -179,7 +178,6 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
           current_stock INTEGER,
           retail_price NUMERIC,
           wholesale_shopkeeper_price NUMERIC,
-          wholesale_customer_price NUMERIC,
           is_deleted BOOLEAN DEFAULT FALSE,
           vendor_id UUID,
           updated_at TIMESTAMP DEFAULT NOW()
@@ -317,15 +315,15 @@ export async function createProduct(product: Omit<Product, 'id'>): Promise<Produ
     const sql = `
         INSERT INTO products (
             id, name_en, name_ur, category, unit, buy_price, buy_time, current_stock,
-            retail_price, wholesale_shopkeeper_price, wholesale_customer_price, vendor_id
+            retail_price, wholesale_shopkeeper_price, vendor_id
         ) VALUES (
-            gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+            gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
         ) RETURNING *
     `;
     const params = [
         product.name_en, product.name_ur, product.category, product.unit || null, product.buy_price,
         product.buy_time, product.current_stock, product.retail_price,
-        product.wholesale_shopkeeper_price, product.wholesale_customer_price, product.vendor_id || null
+        product.wholesale_shopkeeper_price, product.vendor_id || null
     ];
     const rows = await query<Product>(sql, params);
     clearCache('all_products');
@@ -464,6 +462,27 @@ export async function receiveKhataPayment(
     `, [shiftId, cashierId, amount, `Khata Payment - ${customerName}`]);
 }
 
+export async function giveKhataLoan(
+    customerId: string, 
+    amount: number, 
+    customerName: string,
+    shiftId: string,
+    cashierId: string
+): Promise<void> {
+    // 1. Update customer credit balance (increase)
+    await query(`
+        UPDATE customers 
+        SET total_credit_balance = COALESCE(total_credit_balance, 0) + $1 
+        WHERE id = $2
+    `, [amount, customerId]);
+
+    // 2. Insert into cash_register (cash out)
+    await query(`
+        INSERT INTO cash_register (shift_id, cashier_id, cash_in, cash_out, reason)
+        VALUES ($1, $2, 0, $3, $4)
+    `, [shiftId, cashierId, amount, `Khata Loan given - ${customerName}`]);
+}
+
 export async function processCheckout(
     sale: Omit<Sale, 'timestamp'>, 
     items: Omit<SaleItem, 'id' | 'invoice_id'>[],
@@ -545,6 +564,11 @@ export async function updateSetting(key: string, value: string): Promise<void> {
 }
 
 export async function getSales(): Promise<Sale[]> {
-    const sql = "SELECT * FROM sales ORDER BY timestamp DESC";
+    const sql = `
+        SELECT s.*, COALESCE(c.full_name, s.customer_name) as customer_name 
+        FROM sales s 
+        LEFT JOIN customers c ON s.customer_id = c.id 
+        ORDER BY s.timestamp DESC
+    `;
     return await query<Sale>(sql);
 }

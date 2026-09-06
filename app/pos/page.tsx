@@ -7,7 +7,9 @@ import { Modal } from "@/components/ui/Modal";
 import { useShift } from "@/hooks/useShift";
 import { InvoiceReceipt } from "@/components/pos/InvoiceReceipt";
 
-type PricingTier = "retail_price" | "wholesale_customer_price" | "wholesale_shopkeeper_price";
+import Fuse from "fuse.js";
+
+type PricingTier = "retail_price" | "wholesale_shopkeeper_price";
 
 export default function POSPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -16,7 +18,7 @@ export default function POSPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   
   const [pricingTier, setPricingTier] = useState<PricingTier>("retail_price");
-  const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
+  const [cart, setCart] = useState<{ product: Product; quantity: number; manual_price?: number }[]>([]);
   
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "khata">("cash");
@@ -50,22 +52,27 @@ export default function POSPage() {
     fetchData();
   }, []);
 
-  const categories = ["All", ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
-
-  const filteredProducts = products.filter(p => {
-    if (!searchQuery.trim()) return false;
-    const matchesSearch = 
-      p.name_en?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.name_ur?.includes(searchQuery);
-    const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+  // Fuzzy Search setup
+  const fuse = new Fuse(products, {
+    keys: ["name_en", "name_ur"],
+    threshold: 0.3, // 0.0 is perfect match, 1.0 is match anything
+    ignoreLocation: true
   });
 
-  const getPrice = (product: Product) => {
+  const filteredProducts = searchQuery.trim() 
+    ? fuse.search(searchQuery).map(result => result.item)
+    : [];
+
+  const getPrice = (item: { product: Product; manual_price?: number }) => {
+    if (item.manual_price !== undefined) return item.manual_price;
+    return Number(item.product[pricingTier]) || 0;
+  };
+
+  const getProductPrice = (product: Product) => {
     return Number(product[pricingTier]) || 0;
   };
 
-  const cartTotal = cart.reduce((total, item) => total + (getPrice(item.product) * item.quantity), 0);
+  const cartTotal = cart.reduce((total, item) => total + (getPrice(item) * item.quantity), 0);
 
   const addToCart = (product: Product) => {
     setCart(prev => {
@@ -73,7 +80,7 @@ export default function POSPage() {
       if (existing) {
         return prev.map(item => item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
       }
-      return [...prev, { product, quantity: 1 }];
+      return [...prev, { product, quantity: 1, manual_price: getProductPrice(product) }];
     });
   };
 
@@ -85,6 +92,17 @@ export default function POSPage() {
       }
       return item;
     }).filter(item => item.quantity > 0));
+  };
+
+  const updateManualPrice = (productId: string, priceStr: string) => {
+    const price = parseFloat(priceStr);
+    if (isNaN(price)) return;
+    setCart(prev => prev.map(item => {
+      if (item.product.id === productId) {
+        return { ...item, manual_price: price };
+      }
+      return item;
+    }));
   };
 
   const removeFromCart = (productId: string) => {
@@ -145,7 +163,7 @@ export default function POSPage() {
         cart.map(item => ({
           product_id: item.product.id,
           quantity: item.quantity,
-          price_applied: getPrice(item.product)
+          price_applied: getPrice(item)
         })),
         shiftId,
         isKhata && selectedCustomerId ? { customerId: selectedCustomerId, amountToAdd: unpaidRemaining } : undefined
@@ -201,26 +219,10 @@ export default function POSPage() {
             />
           </div>
           
-          {/* Category Pills */}
-          <div className="flex gap-2 overflow-x-auto mt-6 pb-2 scrollbar-hide">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat as string)}
-                className={`px-5 py-2.5 rounded-full font-medium whitespace-nowrap transition-all ${
-                  selectedCategory === cat 
-                    ? "bg-blue-600 text-white shadow-md" 
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
         </div>
 
-        {/* Product Grid */}
-        <div className="flex-1 overflow-y-auto p-6 pb-24">
+        {/* Product List */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24">
           {!searchQuery.trim() ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4">
               <Search className="w-16 h-16 opacity-20" />
@@ -231,30 +233,38 @@ export default function POSPage() {
               <p>No products found for "{searchQuery}"</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="flex flex-col gap-3">
             {filteredProducts.map((product) => (
               <button
                 key={product.id}
                 onClick={() => addToCart(product)}
                 disabled={Number(product.current_stock) <= 0}
-                className={`flex flex-col text-left bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 transition-all duration-200 ${
+                className={`flex items-center justify-between text-left bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 transition-all duration-200 ${
                   Number(product.current_stock) > 0 
-                    ? "hover:border-blue-500 hover:shadow-lg hover:-translate-y-1 cursor-pointer" 
+                    ? "hover:border-blue-500 hover:shadow-md cursor-pointer" 
                     : "opacity-50 cursor-not-allowed"
                 }`}
               >
-                <div className="flex justify-between items-start mb-4 w-full">
-                  <span className="inline-flex px-2 py-1 rounded-md text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-slate-900 dark:text-white line-clamp-1">{product.name_en}</h3>
+                  <h3 className="font-urdu text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-1" dir="rtl">{product.name_ur}</h3>
+                  <div className="mt-2 text-xs font-medium text-slate-500">
                     Stock: {product.current_stock}
-                  </span>
-                  <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                    Rs {getPrice(product).toFixed(0)}
-                  </span>
+                  </div>
                 </div>
-                <h3 className="font-semibold text-slate-900 dark:text-white line-clamp-2">{product.name_en}</h3>
-                <h3 className="font-urdu text-xl text-slate-600 dark:text-slate-400 mt-2 line-clamp-1" dir="rtl">
-                  {product.name_ur}
-                </h3>
+                
+                <div className="flex flex-col items-end gap-1 ml-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">Retail:</span>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">Rs {Number(product.retail_price).toFixed(0)}</span>
+                  </div>
+                  {product.wholesale_shopkeeper_price ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-blue-500">Wholesale:</span>
+                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400">Rs {Number(product.wholesale_shopkeeper_price).toFixed(0)}</span>
+                    </div>
+                  ) : null}
+                </div>
               </button>
             ))}
           </div>
@@ -293,7 +303,6 @@ export default function POSPage() {
             className="mt-4 w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border-none text-slate-800 dark:text-slate-200 font-medium focus:ring-2 focus:ring-blue-500 outline-none"
           >
             <option value="retail_price">Retail Price</option>
-            <option value="wholesale_customer_price">Wholesale (Customer)</option>
             <option value="wholesale_shopkeeper_price">Wholesale (Shopkeeper)</option>
           </select>
         </div>
@@ -327,9 +336,18 @@ export default function POSPage() {
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="text-right">
-                    <div className="font-bold text-lg text-slate-900 dark:text-white">Rs {(getPrice(item.product) * item.quantity).toFixed(0)}</div>
-                    <div className="text-xs text-slate-500">Rs {getPrice(item.product).toFixed(0)} each</div>
+                  <div className="text-right flex flex-col items-end gap-1">
+                    <div className="font-bold text-lg text-slate-900 dark:text-white">Rs {(getPrice(item) * item.quantity).toFixed(0)}</div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-slate-500">Rs</span>
+                      <input 
+                        type="number" 
+                        value={item.manual_price !== undefined ? item.manual_price : getProductPrice(item.product)}
+                        onChange={(e) => updateManualPrice(item.product.id, e.target.value)}
+                        className="w-16 p-1 text-xs text-right border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 focus:ring-1 focus:ring-blue-500 outline-none"
+                      />
+                      <span className="text-xs text-slate-500">each</span>
+                    </div>
                   </div>
                 </div>
               </div>
