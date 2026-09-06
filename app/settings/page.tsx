@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { getSetting, updateSetting } from "@/lib/db";
 import { Settings as SettingsIcon, UserPlus, Trash2 } from "lucide-react";
+import { useTheme } from "next-themes";
 
 export default function Settings() {
   const [cashiers, setCashiers] = useState<string[]>([]);
   const [newCashier, setNewCashier] = useState("");
   const [loading, setLoading] = useState(true);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -96,6 +98,23 @@ export default function Settings() {
               ))}
             </div>
           )}
+        </section>
+
+        <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Appearance</h3>
+          <p className="text-sm text-slate-500 mb-6">Choose how ZeestPOS looks to you.</p>
+          
+          <div className="flex gap-4">
+            <button onClick={() => setTheme("light")} className={`flex-1 p-4 rounded-xl border-2 transition-all font-medium ${theme === 'light' ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'}`}>
+              Light Mode
+            </button>
+            <button onClick={() => setTheme("dark")} className={`flex-1 p-4 rounded-xl border-2 transition-all font-medium ${theme === 'dark' ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'}`}>
+              Dark Mode
+            </button>
+            <button onClick={() => setTheme("system")} className={`flex-1 p-4 rounded-xl border-2 transition-all font-medium ${theme === 'system' ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'}`}>
+              System Default
+            </button>
+          </div>
         </section>
       </div>
     </div>

@@ -48,6 +48,22 @@ export interface CashTransaction {
     reason: string;
 }
 
+export interface User {
+    id: string;
+    username: string;
+    cnic: string;
+    role: string;
+}
+
+export async function getUsers(): Promise<User[]> {
+    return await query<User>("SELECT * FROM users ORDER BY username ASC");
+}
+
+export async function authenticateUser(username: string, cnic: string): Promise<User | null> {
+    const users = await query<User>("SELECT * FROM users WHERE username = $1 AND cnic = $2", [username, cnic]);
+    return users.length > 0 ? users[0] : null;
+}
+
 // Global augmentation for the Electron API bridge
 declare global {
   interface Window {
@@ -137,12 +153,20 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
           value TEXT,
           updated_at TIMESTAMP DEFAULT NOW()
         );
+        CREATE TABLE IF NOT EXISTS users (
+          id UUID PRIMARY KEY,
+          username TEXT,
+          cnic TEXT UNIQUE,
+          role TEXT DEFAULT 'Cashier',
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
       `);
       
       // Add newly added column to web fallback dynamically just in case
       try {
         await browserDb.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type TEXT DEFAULT 'Regular';`);
         await browserDb.exec(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMP DEFAULT NOW());`);
+        await browserDb.exec(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, username TEXT, cnic TEXT UNIQUE, role TEXT DEFAULT 'Cashier', updated_at TIMESTAMP DEFAULT NOW());`);
       } catch (e: any) {
         console.error("Failed to initialize browser DB", e);
         if (typeof window !== 'undefined') alert(`DB Boot Error: ${e.message}`);

@@ -7,6 +7,7 @@ import { useShift } from "@/hooks/useShift";
 import { CashTransaction, getShiftTransactions, addCashTransaction, getSetting } from "@/lib/db";
 import { MonitorSpeaker, ArrowDownToLine, ArrowUpFromLine, Wallet, LogOut, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export default function CashRegister() {
   const { shiftId, cashierId, startShift, endShift } = useShift();
@@ -84,6 +85,9 @@ export default function CashRegister() {
     }
   };
 
+  const { user } = useAuth();
+  const selectedCashier = user?.username || "";
+
   if (!shiftId || !cashierId) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8 bg-slate-50 dark:bg-slate-950">
@@ -92,31 +96,16 @@ export default function CashRegister() {
             <MonitorSpeaker className="w-10 h-10" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Start a Shift</h1>
-          <p className="text-slate-500 mb-8">Select your name to open the cash register and begin logging sales.</p>
+          <p className="text-slate-500 mb-8">You are logged in as <span className="font-bold text-slate-700 dark:text-slate-300">{selectedCashier}</span>. Open the cash register to begin logging sales.</p>
           
           <form onSubmit={handleStartShift} className="space-y-6 text-left">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Active Cashier</label>
-              <select 
-                required
-                value={selectedCashier}
-                onChange={(e) => setSelectedCashier(e.target.value)}
-                className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="" disabled>Select your name...</option>
-                {cashiers.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              {cashiers.length === 0 && (
-                <p className="text-sm text-red-500 mt-2">No cashiers configured. Please add cashiers in the Settings page.</p>
-              )}
-            </div>
             <button
               type="submit"
               disabled={!selectedCashier}
               className="w-full py-4 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-md flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-5 h-5" />
-              Open Register
+              Open Register as {selectedCashier}
             </button>
           </form>
         </div>
