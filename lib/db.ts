@@ -55,6 +55,44 @@ export interface User {
     role: string;
 }
 
+export interface DashboardStats {
+    todaySales: number;
+    todayProfit: number;
+    availableStockSum: number;
+    inventoryValuation: number;
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+    const salesRes = await query<{ total_sales: number }>(`
+        SELECT COALESCE(SUM(total_amount), 0) as total_sales
+        FROM sales 
+        WHERE DATE(timestamp) = CURRENT_DATE
+    `);
+    
+    const profitRes = await query<{ profit: number }>(`
+        SELECT COALESCE(SUM((si.price_applied - p.buy_price) * si.quantity), 0) as profit
+        FROM sale_items si
+        JOIN products p ON si.product_id = p.id
+        JOIN sales s ON si.invoice_id = s.invoice_id
+        WHERE DATE(s.timestamp) = CURRENT_DATE
+    `);
+
+    const stockRes = await query<{ total_stock: number, inventory_value: number }>(`
+        SELECT 
+            COALESCE(SUM(current_stock), 0) as total_stock,
+            COALESCE(SUM(current_stock * buy_price), 0) as inventory_value
+        FROM products
+        WHERE current_stock > 0
+    `);
+
+    return {
+        todaySales: Number(salesRes[0]?.total_sales || 0),
+        todayProfit: Number(profitRes[0]?.profit || 0),
+        availableStockSum: Number(stockRes[0]?.total_stock || 0),
+        inventoryValuation: Number(stockRes[0]?.inventory_value || 0)
+    };
+}
+
 export async function getUsers(): Promise<User[]> {
     return await query<User>("SELECT * FROM users ORDER BY username ASC");
 }

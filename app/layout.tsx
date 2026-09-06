@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Noto_Nastaliq_Urdu } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { MobileNav } from "@/components/layout/MobileNav";
 
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
@@ -29,13 +30,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${notourdu.variable} h-full antialiased`} suppressHydrationWarning>
-      <body className="h-full flex bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans transition-colors duration-200">
+      <body className="h-full flex bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans transition-colors duration-200 overflow-hidden">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
-            <Sidebar />
-            <main className="flex-1 overflow-auto">
+            <div className="hidden md:flex h-full">
+              <Sidebar />
+            </div>
+            <main className="flex-1 overflow-auto pb-20 md:pb-0 relative">
               {children}
             </main>
+            <MobileNav />
           </AuthProvider>
         </ThemeProvider>
       </body>
