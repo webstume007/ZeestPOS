@@ -303,6 +303,24 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
         await safeAlter(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin TEXT DEFAULT '0000';`);
         await safeAlter(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'Cashier';`);
         await safeAlter(`ALTER TABLE cash_register ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();`);
+        // Ensure cash_register.id exists and has no nulls
+        await safeAlter(`UPDATE cash_register SET id = gen_random_uuid() WHERE id IS NULL;`);
+
+        // Guarantee all tables have unique indexes on their primary keys for ON CONFLICT compatibility
+        await safeAlter(`CREATE UNIQUE INDEX IF NOT EXISTS users_id_unique ON users (id);`);
+        await safeAlter(`CREATE UNIQUE INDEX IF NOT EXISTS vendors_id_unique ON vendors (id);`);
+        await safeAlter(`CREATE UNIQUE INDEX IF NOT EXISTS customers_id_unique ON customers (id);`);
+        await safeAlter(`CREATE UNIQUE INDEX IF NOT EXISTS products_id_unique ON products (id);`);
+        await safeAlter(`CREATE UNIQUE INDEX IF NOT EXISTS sales_invoice_id_unique ON sales (invoice_id);`);
+        await safeAlter(`CREATE UNIQUE INDEX IF NOT EXISTS sale_items_id_unique ON sale_items (id);`);
+        await safeAlter(`CREATE UNIQUE INDEX IF NOT EXISTS stock_logs_id_unique ON stock_logs (id);`);
+        await safeAlter(`CREATE UNIQUE INDEX IF NOT EXISTS customer_transactions_id_unique ON customer_transactions (id);`);
+        await safeAlter(`CREATE UNIQUE INDEX IF NOT EXISTS cash_register_id_unique ON cash_register (id);`);
+        await safeAlter(`CREATE UNIQUE INDEX IF NOT EXISTS settings_key_unique ON settings (key);`);
+
+        // Clean up obsolete dummy test product if it exists
+        await safeAlter(`DELETE FROM products WHERE id = '451db687-f4d3-4e86-9dc6-99417ca2da26';`);
+
         // Drop old FK constraints if they exist from previous schema versions
         await safeAlter(`ALTER TABLE sale_items DROP CONSTRAINT IF EXISTS sale_items_invoice_id_fkey;`);
         await safeAlter(`ALTER TABLE sale_items DROP CONSTRAINT IF EXISTS sale_items_product_id_fkey;`);
@@ -348,7 +366,6 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
 
       } catch (e: any) {
         console.error("Failed to initialize browser DB", e);
-        if (typeof window !== 'undefined') alert(`DB Boot Error: ${e.message}`);
         throw e;
       }
     }
@@ -360,27 +377,21 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
       return result.rows as T[];
     } catch (e: any) {
       console.error("Browser DB Query Error:", e);
-      if (typeof window !== 'undefined') alert(`DB Query Error: ${e.message}`);
       throw e;
     }
   }
 
   // 3. Fallback if something went wrong
   console.error("Database connection not available.");
-  if (typeof window !== 'undefined') alert("Database connection not available.");
   throw new Error('Database access is not available in this environment.');
 }
 
-import { getCache, setCache, clearCache } from "./cache";
+import { clearCache } from "./cache";
 
 // Product CRUD
 export async function getProducts(): Promise<Product[]> {
-    const cached = getCache<Product[]>('all_products');
-    if (cached) return cached;
-    
-    const products = await query<Product>('SELECT * FROM products WHERE is_deleted IS NOT TRUE ORDER BY name_en ASC');
-    setCache('all_products', products);
-    return products;
+    // Always query fresh data directly from local PGlite (fast, in-memory, no stale cache)
+    return await query<Product>('SELECT * FROM products WHERE is_deleted IS NOT TRUE ORDER BY name_en ASC');
 }
 
 export async function createProduct(product: Omit<Product, 'id'>): Promise<Product> {

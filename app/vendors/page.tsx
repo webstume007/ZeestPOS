@@ -32,6 +32,13 @@ export default function Vendors() {
 
   useEffect(() => {
     fetchVendors();
+    const handleRefresh = () => fetchVendors();
+    window.addEventListener('db-synced', handleRefresh);
+    window.addEventListener('db-mutation', handleRefresh);
+    return () => {
+      window.removeEventListener('db-synced', handleRefresh);
+      window.removeEventListener('db-mutation', handleRefresh);
+    };
   }, []);
 
   useEffect(() => {

@@ -21,7 +21,7 @@ export function useSync() {
     }
   }, []);
 
-  const runSync = async () => {
+  const runSync = async (forceFull: boolean = false) => {
     // Prevent concurrent syncs at the hook level
     if (isSyncingRef.current) return;
     
@@ -34,7 +34,7 @@ export function useSync() {
     setStatus("syncing");
     setError(null);
     try {
-      await syncDatabase();
+      await syncDatabase(forceFull);
       setStatus("success");
       setLastSyncedTime(localStorage.getItem('last_synced_timestamp'));
       setTimeout(() => {

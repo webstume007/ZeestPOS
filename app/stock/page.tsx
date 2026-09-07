@@ -28,6 +28,13 @@ export default function StockManagement() {
 
   useEffect(() => {
     fetchProducts();
+    const handleRefresh = () => fetchProducts();
+    window.addEventListener('db-synced', handleRefresh);
+    window.addEventListener('db-mutation', handleRefresh);
+    return () => {
+      window.removeEventListener('db-synced', handleRefresh);
+      window.removeEventListener('db-mutation', handleRefresh);
+    };
   }, []);
 
   // Stats calculation

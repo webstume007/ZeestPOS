@@ -95,14 +95,24 @@ export default function Settings() {
 
               <div>
                 <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Manual Sync</div>
-                <button
-                  onClick={triggerManualSync}
-                  disabled={status === "syncing"}
-                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <RefreshCw className={`w-4 h-4 mr-2 ${status === "syncing" ? "animate-spin" : ""}`} />
-                  {status === "syncing" ? "Syncing..." : "Sync Now"}
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={() => triggerManualSync(false)}
+                    disabled={status === "syncing"}
+                    className="flex-1 flex items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${status === "syncing" ? "animate-spin" : ""}`} />
+                    {status === "syncing" ? "Syncing..." : "Sync Now"}
+                  </button>
+                  <button
+                    onClick={() => triggerManualSync(true)}
+                    disabled={status === "syncing"}
+                    title="Downloads all products and records from cloud from scratch"
+                    className="flex-1 flex items-center justify-center py-3 px-4 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Force Full Re-sync
+                  </button>
+                </div>
               </div>
             </div>
 

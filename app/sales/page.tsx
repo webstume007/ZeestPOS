@@ -49,6 +49,13 @@ export default function SalesHistory() {
 
   useEffect(() => {
     fetchSales();
+    const handleRefresh = () => fetchSales();
+    window.addEventListener('db-synced', handleRefresh);
+    window.addEventListener('db-mutation', handleRefresh);
+    return () => {
+      window.removeEventListener('db-synced', handleRefresh);
+      window.removeEventListener('db-mutation', handleRefresh);
+    };
   }, []);
 
   const filteredSales = useMemo(() => {

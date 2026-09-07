@@ -46,18 +46,21 @@ const PRIMARY_KEYS: Record<string, string> = {
 // Sync lock to prevent concurrent syncs
 let _isSyncing = false;
 
-export async function syncDatabase(): Promise<void> {
+export async function syncDatabase(forceFull: boolean = false): Promise<void> {
   if (_isSyncing) {
     console.log('[Sync] Sync already in progress, skipping.');
     return;
   }
   _isSyncing = true;
 
-  console.log('[Sync] Starting background sync...');
+  console.log(`[Sync] Starting ${forceFull ? 'FULL' : 'delta'} sync...`);
   
-  const lastSynced = localStorage.getItem('last_synced_timestamp') || '1970-01-01T00:00:00.000Z';
+  const isV2Init = typeof window !== 'undefined' && localStorage.getItem('sync_v2_initialized') === 'true';
+  const lastSynced = (forceFull || !isV2Init) 
+    ? '1970-01-01T00:00:00.000Z' 
+    : (localStorage.getItem('last_synced_timestamp') || '1970-01-01T00:00:00.000Z');
+  
   const syncStartTime = new Date().toISOString();
-
   let syncErrors: string[] = [];
 
   try {
@@ -77,9 +80,8 @@ export async function syncDatabase(): Promise<void> {
         // Sanitize records before pushing
         const sanitized = localChanges.map(record => {
           const clean = { ...record };
-          // Stamp with sync time so other devices can discover these changes
           clean.updated_at = syncStartTime;
-          // Fix cash_register: ensure shift_id is not "no-shift" (invalid for UUID column on Supabase)
+          // Fix cash_register: ensure shift_id is null if "no-shift"
           if (table === 'cash_register') {
             if (clean.shift_id === 'no-shift' || !clean.shift_id) {
               clean.shift_id = null;
@@ -137,11 +139,21 @@ export async function syncDatabase(): Promise<void> {
     try {
       for (const table of PULL_ORDER) {
         try {
-          // Fetch remote changes since last sync
-          const { data: remoteChanges, error } = await supabase
-            .from(table)
-            .select('*')
-            .gt('updated_at', lastSynced);
+          // Check local count: if local table is empty, always pull EVERYTHING from Supabase
+          let isTableEmpty = false;
+          try {
+            const countRes = await query<{ count: string }>(`SELECT COUNT(*) as count FROM ${table}`, [], false);
+            isTableEmpty = Number(countRes[0]?.count || 0) === 0;
+          } catch (_) {}
+
+          const shouldPullAll = forceFull || !isV2Init || isTableEmpty;
+
+          let pullQuery = supabase.from(table).select('*');
+          if (!shouldPullAll && lastSynced !== '1970-01-01T00:00:00.000Z') {
+            pullQuery = pullQuery.gt('updated_at', lastSynced);
+          }
+
+          const { data: remoteChanges, error } = await pullQuery;
 
           if (error) {
             syncErrors.push(`Pull(${table}): ${error.message}`);
@@ -150,7 +162,7 @@ export async function syncDatabase(): Promise<void> {
 
           if (!remoteChanges || remoteChanges.length === 0) continue;
           
-          console.log(`[Sync] Pulling ${remoteChanges.length} records for ${table}`);
+          console.log(`[Sync] Pulling ${remoteChanges.length} records for ${table} (all: ${shouldPullAll})`);
           
           // Filter to only columns that exist in local PGlite schema
           const knownCols = LOCAL_COLUMNS[table];
@@ -175,6 +187,7 @@ export async function syncDatabase(): Promise<void> {
             });
             
             const columns = knownCols.filter(col => col in filteredChunk[0]);
+            if (columns.length === 0) continue;
             
             const allValues: any[] = [];
             const valueStrings = filteredChunk.map((record, rowIndex) => {
@@ -191,11 +204,13 @@ export async function syncDatabase(): Promise<void> {
               .map(col => `${col} = EXCLUDED.${col}`)
               .join(', ');
             
+            const onConflictAction = setClause ? `DO UPDATE SET ${setClause}` : `DO NOTHING`;
+
             const sql = `
               INSERT INTO ${table} (${columns.join(', ')})
               VALUES ${valueStrings.join(', ')}
               ON CONFLICT (${pk}) 
-              DO UPDATE SET ${setClause}
+              ${onConflictAction}
             `;
             
             try {
@@ -208,14 +223,14 @@ export async function syncDatabase(): Promise<void> {
                 const vals = Object.values(record);
                 const ph = cols.map((_, idx) => `$${idx + 1}`).join(', ');
                 const sc = cols.filter(c => c !== pk).map(c => `${c} = EXCLUDED.${c}`).join(', ');
+                const onConf = sc ? `DO UPDATE SET ${sc}` : `DO NOTHING`;
                 try {
                   await query(
-                    `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${ph}) ON CONFLICT (${pk}) DO UPDATE SET ${sc}`,
+                    `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${ph}) ON CONFLICT (${pk}) ${onConf}`,
                     vals,
                     false
                   );
                 } catch (innerErr: any) {
-                  // Silently skip individual record failures (orphaned FKs, etc.)
                   console.warn(`[Sync] Skipped pull record for ${table}:`, innerErr.message);
                 }
               }
@@ -230,17 +245,23 @@ export async function syncDatabase(): Promise<void> {
     }
 
     // ═══════════════════════════════════════════════════════
-    // 3. UPDATE TIMESTAMP
-    // Always advance the timestamp, even with some errors, to prevent
-    // re-syncing the entire history every time. Only block on critical failures.
+    // 3. UPDATE TIMESTAMP & FLAGS
     // ═══════════════════════════════════════════════════════
-    localStorage.setItem('last_synced_timestamp', syncStartTime);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('last_synced_timestamp', syncStartTime);
+      localStorage.setItem('sync_v2_initialized', 'true');
+      try {
+        localStorage.removeItem('all_products');
+      } catch (_) {}
+
+      // Notify UI components that new data has arrived
+      window.dispatchEvent(new CustomEvent('db-synced', { detail: { timestamp: syncStartTime } }));
+    }
     
     if (syncErrors.length > 0) {
-      console.warn(`[Sync] Completed with ${syncErrors.length} non-critical errors:`, syncErrors);
-      // Only throw if the majority of tables failed (critical failure)
-      if (syncErrors.length > PUSH_ORDER.length) {
-        throw new Error(syncErrors.slice(0, 5).join(' | '));
+      console.warn(`[Sync] Completed with ${syncErrors.length} non-critical issues:`, syncErrors);
+      if (syncErrors.length > PUSH_ORDER.length * 2) {
+        throw new Error(syncErrors.slice(0, 3).join(' | '));
       }
     } else {
       console.log('[Sync] Background sync completed successfully.');

@@ -32,6 +32,13 @@ export default function CustomerDirectory() {
 
   useEffect(() => {
     fetchCustomers();
+    const handleRefresh = () => fetchCustomers();
+    window.addEventListener('db-synced', handleRefresh);
+    window.addEventListener('db-mutation', handleRefresh);
+    return () => {
+      window.removeEventListener('db-synced', handleRefresh);
+      window.removeEventListener('db-mutation', handleRefresh);
+    };
   }, []);
 
   const handleCreateCustomer = async (e: React.FormEvent) => {
