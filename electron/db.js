@@ -118,7 +118,7 @@ async function initDB() {
   console.log('Database schema verified/created successfully.');
 
   // Add updated_at columns and triggers if they don't exist
-  const tables = ['products', 'customers', 'sales', 'sale_items', 'cash_register', 'vendors', 'users'];
+  const tables = ['products', 'customers', 'sales', 'sale_items', 'cash_register', 'vendors', 'users', 'stock_logs', 'settings', 'customer_transactions'];
     
   for (const table of tables) {
     try {

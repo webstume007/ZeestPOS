@@ -285,6 +285,11 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
         await browserDb.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
         await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
         await browserDb.exec(`ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE stock_logs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE cash_register ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE customer_transactions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
         await browserDb.exec(`
           INSERT INTO users (id, username, cnic, pin, role)
           VALUES ('46c2226c-1086-4c31-88bb-daf23d830452', 'Mohsin', '3120352438849', '0000', 'Admin')
