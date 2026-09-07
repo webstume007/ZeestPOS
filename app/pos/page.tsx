@@ -505,8 +505,8 @@ export default function POSPage() {
         </div>
       )}
 
-      {/* LEFT: Search + quick pick */}
-      <div className="md:flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden min-h-0 relative shrink-0 md:shrink">
+      {/* LEFT: Search */}
+      <div className="md:flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm min-h-0 relative shrink-0 md:shrink">
         <div className="p-2 md:p-3 border-b border-slate-100 dark:border-slate-800/80 shrink-0 relative z-40" ref={customerSearchRef}>
           {selectedCustomer ? (
             <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40">
@@ -689,68 +689,8 @@ export default function POSPage() {
             Enter add · F2 checkout · F4 search · Ctrl+Enter pay
           </p>
         </div>
-
-        <div className={`${cart.length > 0 ? "hidden md:flex" : "flex"} flex-1 min-h-0 flex-col`}>
-          <div className="px-2 md:px-3 pt-2 overflow-x-auto shrink-0 flex gap-1.5 pb-1">
-            <button
-              type="button"
-              onClick={() => setCategoryFilter("all")}
-              className={`whitespace-nowrap px-2.5 py-1 rounded-lg text-[11px] font-semibold ${
-                categoryFilter === "all"
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-              }`}
-            >
-              All
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setCategoryFilter(cat)}
-                className={`whitespace-nowrap px-2.5 py-1 rounded-lg text-[11px] font-semibold ${
-                  categoryFilter === cat
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 md:p-3 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 content-start">
-            {quickProducts.length === 0 ? (
-              <div className="col-span-full h-40 flex flex-col items-center justify-center text-slate-400 text-sm">
-                No in-stock products{categoryFilter !== "all" ? " in this category" : ""}
-              </div>
-            ) : (
-              quickProducts.map((product) => (
-                <button
-                  key={product.id}
-                  type="button"
-                  onClick={() => handleProductSelect(product)}
-                  className="text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 hover:border-blue-400 hover:bg-blue-50/60 dark:hover:bg-blue-950/30 transition-colors"
-                >
-                  <div className="font-semibold text-xs text-slate-900 dark:text-white line-clamp-2 min-h-[2rem]">
-                    {product.name_en}
-                  </div>
-                  {product.name_ur && (
-                    <div className="font-urdu text-[10px] text-slate-500 truncate" dir="rtl">
-                      {product.name_ur}
-                    </div>
-                  )}
-                  <div className="mt-1.5 flex items-center justify-between">
-                    <span className="font-bold text-sm text-blue-600 dark:text-blue-400">
-                      Rs {getProductPrice(product).toFixed(0)}
-                    </span>
-                    <span className="text-[10px] text-slate-400">{product.current_stock}</span>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
       </div>
+
 
       {/* RIGHT: Cart */}
       <div className="w-full md:w-[380px] lg:w-[420px] shrink-0 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden min-h-0 flex-1 md:flex-none">
