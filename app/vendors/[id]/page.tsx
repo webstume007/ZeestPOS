@@ -95,8 +95,8 @@ export default function VendorProfile({ params }: { params: Promise<{ id: string
     text += `Filter: ${filter}\n\n`;
     
     filteredHistory.forEach(log => {
-      text += `📦 ${log.product_name}\n`;
-      text += `📅 ${format(new Date(log.timestamp), "dd MMM yyyy")}\n`;
+      text += `- ${log.product_name}\n`;
+      text += `  Date: ${format(new Date(log.timestamp), "dd MMM yyyy")}\n`;
       text += `Qty: ${log.quantity_added} | Total: Rs ${(Number(log.buy_price) * log.quantity_added).toFixed(0)}\n\n`;
     });
     

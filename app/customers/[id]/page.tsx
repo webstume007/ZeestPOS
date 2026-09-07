@@ -159,7 +159,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
               </button>
             </div>
             <p className="text-slate-500 text-xs sm:text-sm flex items-center gap-3 mt-1.5">
-              <span>📱 {customer.whatsapp_number || "No WhatsApp"}</span>
+              <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-slate-400" /> {customer.whatsapp_number || "No WhatsApp"}</span>
               {customer.address && (
                 <>
                   <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full" />
@@ -330,7 +330,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
                       <td className="py-3.5 px-6">{sale.timestamp ? format(new Date(sale.timestamp), "MMM dd, yyyy - hh:mm a") : "Unknown"}</td>
                       <td className="py-3.5 px-6">
                         <span className="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-xs">
-                          👤 {sale.cashier_id || "Admin"}
+                          <User className="w-3 h-3" /> {sale.cashier_id || "Admin"}
                         </span>
                       </td>
                       <td className="py-3.5 px-6">

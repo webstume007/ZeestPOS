@@ -54,7 +54,6 @@ export default function StockManagement() {
   }, [products]);
 
 
-
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto h-full flex flex-col space-y-6">
       {/* Top Header */}
