@@ -12,38 +12,45 @@ export function MobileNav() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { user, logout } = useAuth();
 
-  if (pathname === "/login") return null;
+  if (pathname === "/login" || pathname === "/") return null;
 
   return (
     <>
-      {/* Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-40 px-6 py-3 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+      {/* Top Navigation */}
+      <div className="mobile-nav-visible md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-50 px-6 py-3 flex justify-between items-center shadow-sm">
         <Link 
           href="/" 
-          className={`flex flex-col items-center gap-1 ${pathname === "/" ? "text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"}`}
+          className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
         >
-          <LayoutDashboard className="w-6 h-6" />
+          <LayoutDashboard className="w-5 h-5 sm:w-6 sm:h-6" />
           <span className="text-[10px] font-medium">Home</span>
         </Link>
         <Link 
           href="/pos" 
           className={`flex flex-col items-center gap-1 ${pathname === "/pos" ? "text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"}`}
         >
-          <ShoppingCart className="w-6 h-6" />
+          <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
           <span className="text-[10px] font-medium">New Bill</span>
         </Link>
         <Link 
-          href="/stock" 
-          className={`flex flex-col items-center gap-1 ${pathname === "/stock" ? "text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"}`}
+          href="/sales" 
+          className={`flex flex-col items-center gap-1 ${pathname === "/sales" ? "text-amber-600 dark:text-amber-400" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"}`}
         >
-          <Package className="w-6 h-6" />
+          <History className="w-5 h-5 sm:w-6 sm:h-6" />
+          <span className="text-[10px] font-medium">History</span>
+        </Link>
+        <Link 
+          href="/stock" 
+          className={`flex flex-col items-center gap-1 ${pathname === "/stock" ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"}`}
+        >
+          <Package className="w-5 h-5 sm:w-6 sm:h-6" />
           <span className="text-[10px] font-medium">Stock</span>
         </Link>
         <button 
           onClick={() => setIsDrawerOpen(true)}
           className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
         >
-          <Menu className="w-6 h-6" />
+          <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
           <span className="text-[10px] font-medium">More</span>
         </button>
       </div>
@@ -126,6 +133,17 @@ export function MobileNav() {
                   className="p-2 text-slate-500 hover:text-red-500 transition-colors"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </button>
+              </div>
+            )}
+            {user && (
+              <div className="p-4 mx-3 mb-4 mt-auto bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{user.username}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{user.role}</p>
+                </div>
+                <button onClick={() => { logout(); setIsDrawerOpen(false); }} className="p-2 text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 transition-colors" title="Logout">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                 </button>
               </div>
             )}

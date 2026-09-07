@@ -35,34 +35,10 @@ export default function Dashboard() {
 
   return (
     <div className="p-3 md:p-6 max-w-7xl mx-auto h-full flex flex-col">
-      <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mt-2">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">Main Dashboard</h1>
-          <p className="text-sm md:text-base text-slate-500 mt-1 md:mt-2">Welcome to BajwaStore. Select an action below.</p>
-        </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-          {/* Beautiful Logged in As UI */}
-          <div className="flex items-center gap-2.5 bg-white dark:bg-slate-900 px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-              {user?.username?.charAt(0).toUpperCase() || <UserCircle className="w-5 h-5" />}
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Logged In As</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-white leading-none">
-                {user?.username || "Admin"}
-              </span>
-            </div>
-          </div>
-          
-          <Link href="/sales" className="flex items-center justify-center gap-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800/50 px-4 py-2.5 rounded-2xl font-semibold transition-colors shadow-sm">
-            <History className="w-5 h-5" />
-            <span className="sm:inline">Sales History</span>
-          </Link>
-        </div>
-      </div>
-
-      <div className="md:hidden flex justify-center pb-6 pt-2 opacity-80">
-        <Logo className="w-28 h-auto" />
+      <div className="mb-4 flex flex-col justify-center items-center gap-1 mt-6 text-center">
+        <Logo className="w-32 sm:w-40 h-auto" />
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-3 hidden md:block">BajwaGeneralStore</h1>
+        <p className="text-xs sm:text-sm text-slate-500 font-medium">Main Bazar Chunnawala</p>
       </div>
 
       {/* Statistics Cards */}

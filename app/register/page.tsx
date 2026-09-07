@@ -173,14 +173,6 @@ export default function CashRegister() {
             <span className="hidden sm:inline">Add Cash Out</span>
             <span className="sm:hidden">Cash Out</span>
           </button>
-          
-          <Link
-            href="/sales"
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 md:gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 text-slate-700 dark:text-slate-300 px-3 md:px-5 py-2 md:py-3 rounded-xl font-medium transition-colors text-sm md:text-base"
-          >
-            <History className="w-4 h-4 md:w-5 md:h-5" />
-            <span>Sales History</span>
-          </Link>
         </div>
         
         {/* Filters */}

@@ -36,7 +36,7 @@ export default function RootLayout({
             <div className="hidden md:flex h-full">
               <Sidebar />
             </div>
-            <main className="flex-1 overflow-auto pb-20 md:pb-0 relative">
+            <main className="flex-1 overflow-auto relative [&:has(~.mobile-nav-visible)]:pt-[72px] md:[&:has(~.mobile-nav-visible)]:pt-0">
               {children}
             </main>
             <MobileNav />
