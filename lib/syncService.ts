@@ -32,11 +32,18 @@ export async function syncDatabase(): Promise<void> {
         
         if (localChanges.length > 0) {
           // Fix invalid uuid for cash_register (must be valid UUID due to NOT NULL constraint)
+          // Also forcefully update the updated_at timestamp to syncStartTime so Supabase registers it as a NEW change
+          // This guarantees it will be pulled by other devices that might have a slightly older lastSynced time
           if (table === 'cash_register') {
             for (const record of localChanges) {
+              record.updated_at = syncStartTime;
               if (record.shift_id === 'no-shift' || record.shift_id === null) {
                 record.shift_id = '00000000-0000-0000-0000-000000000000';
               }
+            }
+          } else {
+            for (const record of localChanges) {
+              record.updated_at = syncStartTime;
             }
           }
           

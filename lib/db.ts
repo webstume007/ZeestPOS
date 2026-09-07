@@ -324,7 +324,9 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
           CREATE OR REPLACE FUNCTION trigger_set_updated_at()
           RETURNS TRIGGER AS $$
           BEGIN
-            NEW.updated_at = NOW();
+            IF NEW.updated_at IS NOT DISTINCT FROM OLD.updated_at THEN
+              NEW.updated_at = NOW();
+            END IF;
             RETURN NEW;
           END;
           $$ LANGUAGE plpgsql;

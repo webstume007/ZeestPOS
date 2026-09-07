@@ -347,35 +347,35 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
           )}
         </div>
 
-      {!initialData && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Initial Stock</label>
-            <input
-              type="number"
-              name="current_stock"
-              value={formData.current_stock}
-              onChange={handleChange}
-              required
-              min="0"
-              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Buy Price</label>
-            <input
-              type="number"
-              name="buy_price"
-              value={formData.buy_price}
-              onChange={handleChange}
-              required
-              min="0"
-              step="0.01"
-              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-            />
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            {initialData ? "Current Stock (Edit)" : "Initial Stock"}
+          </label>
+          <input
+            type="number"
+            name="current_stock"
+            value={formData.current_stock}
+            onChange={handleChange}
+            required
+            min="0"
+            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+          />
         </div>
-      )}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Buy Price</label>
+          <input
+            type="number"
+            name="buy_price"
+            value={formData.buy_price}
+            onChange={handleChange}
+            required
+            min="0"
+            step="0.01"
+            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+          />
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
         <div className="space-y-2">
