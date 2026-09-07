@@ -31,21 +31,37 @@ export async function syncDatabase(): Promise<void> {
         const localChanges = await query(`SELECT * FROM ${table} WHERE updated_at > $1 OR updated_at IS NULL`, [lastSynced], false);
         
         if (localChanges.length > 0) {
-          // Fix invalid uuid for cash_register
+          // Fix invalid uuid for cash_register (must be valid UUID due to NOT NULL constraint)
           if (table === 'cash_register') {
             for (const record of localChanges) {
-              if (record.shift_id === 'no-shift') {
-                record.shift_id = null;
+              if (record.shift_id === 'no-shift' || record.shift_id === null) {
+                record.shift_id = '00000000-0000-0000-0000-000000000000';
               }
             }
           }
           
           console.log(`[Sync] Pushing ${localChanges.length} records for ${table} to Supabase`);
           const { error } = await supabase.from(table).upsert(localChanges);
+          
           if (error) {
-            console.error(`[Sync] Supabase push error for ${table}:`, error);
-            syncErrors.push(`Push error (${table}): ${error.message || JSON.stringify(error)}`);
-            hasErrors = true;
+            console.warn(`[Sync] Batch push failed for ${table}, falling back to individual inserts:`, error.message);
+            // Fallback to individual upsert to prevent one bad record (poison pill) from failing the whole table
+            let tableHasErrors = false;
+            for (const record of localChanges) {
+              const { error: recordError } = await supabase.from(table).upsert([record]);
+              if (recordError) {
+                // Auto-resolve foreign key errors for products referencing deleted vendors
+                if (recordError.message.includes('foreign key constraint') && table === 'products') {
+                   record.vendor_id = null; // Strip invalid vendor
+                   const { error: retryError } = await supabase.from(table).upsert([record]);
+                   if (!retryError) continue; // Resolved!
+                }
+                
+                syncErrors.push(`Push error (${table}): ${recordError.message || JSON.stringify(recordError)}`);
+                tableHasErrors = true;
+              }
+            }
+            if (tableHasErrors) hasErrors = true;
           }
         }
       } catch (err: any) {
