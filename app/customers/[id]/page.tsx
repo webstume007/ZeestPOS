@@ -137,11 +137,26 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
             {customer.full_name ? customer.full_name.charAt(0).toUpperCase() : "C"}
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">{customer.full_name}</h1>
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-semibold">
                 {customer.customer_type || "Regular"}
               </span>
+              <button 
+                onClick={() => {
+                  setEditFormData({ 
+                    full_name: customer.full_name || "", 
+                    whatsapp_number: customer.whatsapp_number || "", 
+                    address: customer.address || "", 
+                    customer_type: customer.customer_type || "Regular" 
+                  });
+                  setIsEditModalOpen(true);
+                }}
+                className="ml-1 p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                title="Edit Customer"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
             </div>
             <p className="text-slate-500 text-xs sm:text-sm flex items-center gap-3 mt-1.5">
               <span>📱 {customer.whatsapp_number || "No WhatsApp"}</span>
@@ -157,22 +172,6 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
 
         {/* Khata Balance & Quick Action Buttons */}
         <div className="bg-slate-50 dark:bg-slate-800/80 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-5 w-full md:w-auto border border-slate-200/80 dark:border-slate-700 relative">
-          <button 
-            onClick={() => {
-              setEditFormData({ 
-                full_name: customer.full_name || "", 
-                whatsapp_number: customer.whatsapp_number || "", 
-                address: customer.address || "", 
-                customer_type: customer.customer_type || "Regular" 
-              });
-              setIsEditModalOpen(true);
-            }}
-            className="absolute top-2 right-2 p-2 text-slate-400 hover:text-blue-500 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors"
-            title="Edit Customer"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
-          
           <div>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
               <Wallet className="w-3.5 h-3.5 text-blue-500" /> Pending Khata Balance

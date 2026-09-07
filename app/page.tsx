@@ -37,8 +37,7 @@ export default function Dashboard() {
     <div className="p-3 md:p-6 max-w-7xl mx-auto h-full flex flex-col">
       <div className="mb-4 flex flex-col justify-center items-center gap-1 mt-6 text-center">
         <Logo className="w-32 sm:w-40 h-auto" />
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-3 hidden md:block">BajwaGeneralStore</h1>
-        <p className="text-xs sm:text-sm text-slate-500 font-medium">Main Bazar Chunnawala</p>
+        <p className="text-xs sm:text-sm text-slate-500 font-medium mt-2">Main Bazar Chunnawala</p>
       </div>
 
       {/* Statistics Cards */}
