@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { Customer, Sale, CustomerTransaction, getCustomer, getCustomerSales, getCustomerTransactions, receiveKhataPayment, giveKhataLoan } from "@/lib/db";
+import { Customer, Sale, CustomerTransaction, getCustomer, getCustomerSales, getCustomerTransactions, receiveKhataPayment, giveKhataLoan, updateCustomer } from "@/lib/db";
 import { Modal } from "@/components/ui/Modal";
-import { User, Receipt, History, Wallet, ArrowDownRight, ArrowUpRight, BookOpen, ShieldCheck, Clock } from "lucide-react";
+import { User, Receipt, History, Wallet, ArrowDownRight, ArrowUpRight, BookOpen, ShieldCheck, Clock, Edit2, Phone, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -29,6 +29,10 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
 
   const { user } = useAuth();
 
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({ full_name: "", whatsapp_number: "", address: "", customer_type: "Regular" });
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const fetchCustomerData = async () => {
     try {
       const c = await getCustomer(id);
@@ -41,6 +45,20 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
       console.error("Failed to fetch customer profile:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingEdit(true);
+    try {
+      await updateCustomer(customer!.id, editFormData);
+      setIsEditModalOpen(false);
+      await fetchCustomerData();
+    } catch (error) {
+      console.error("Failed to update customer:", error);
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -130,7 +148,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
               {customer.address && (
                 <>
                   <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full" />
-                  <span>📍 {customer.address}</span>
+                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {customer.address}</span>
                 </>
               )}
             </p>
@@ -138,7 +156,23 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
         </div>
 
         {/* Khata Balance & Quick Action Buttons */}
-        <div className="bg-slate-50 dark:bg-slate-800/80 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-5 w-full md:w-auto border border-slate-200/80 dark:border-slate-700">
+        <div className="bg-slate-50 dark:bg-slate-800/80 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-5 w-full md:w-auto border border-slate-200/80 dark:border-slate-700 relative">
+          <button 
+            onClick={() => {
+              setEditFormData({ 
+                full_name: customer.full_name || "", 
+                whatsapp_number: customer.whatsapp_number || "", 
+                address: customer.address || "", 
+                customer_type: customer.customer_type || "Regular" 
+              });
+              setIsEditModalOpen(true);
+            }}
+            className="absolute top-2 right-2 p-2 text-slate-400 hover:text-blue-500 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors"
+            title="Edit Customer"
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+          
           <div>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
               <Wallet className="w-3.5 h-3.5 text-blue-500" /> Pending Khata Balance
@@ -424,6 +458,68 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
               className="px-6 py-2.5 rounded-xl font-bold text-xs bg-red-600 text-white hover:bg-red-700 shadow-sm disabled:opacity-50"
             >
               {processingGive ? "Recording..." : "Confirm & Save Log"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Customer Modal */}
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Customer">
+        <form onSubmit={handleEditCustomer} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Full Name</label>
+            <input
+              type="text"
+              required
+              value={editFormData.full_name}
+              onChange={(e) => setEditFormData(prev => ({ ...prev, full_name: e.target.value }))}
+              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">WhatsApp Number</label>
+            <input
+              type="text"
+              value={editFormData.whatsapp_number}
+              onChange={(e) => setEditFormData(prev => ({ ...prev, whatsapp_number: e.target.value }))}
+              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Address</label>
+            <input
+              type="text"
+              value={editFormData.address}
+              onChange={(e) => setEditFormData(prev => ({ ...prev, address: e.target.value }))}
+              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Customer Type</label>
+            <select
+              value={editFormData.customer_type}
+              onChange={(e) => setEditFormData(prev => ({ ...prev, customer_type: e.target.value }))}
+              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="Regular">Regular</option>
+              <option value="Wholesale">Wholesale</option>
+              <option value="Sale Customer">Sale Customer</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(false)}
+              className="px-6 py-2.5 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={savingEdit}
+              className="px-6 py-2.5 rounded-xl font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {savingEdit ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>

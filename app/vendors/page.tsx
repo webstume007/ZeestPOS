@@ -2,18 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { getVendors, createVendor, getVendorStockHistory, Vendor, StockLog } from "@/lib/db";
-import { Plus, User, Phone, MapPin, Package } from "lucide-react";
+import { getVendors, createVendor, Vendor } from "@/lib/db";
+import { Plus, User, Phone, MapPin, Package, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
+import Link from "next/link";
 
 export default function Vendors() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
-  const [stockHistory, setStockHistory] = useState<StockLog[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -37,19 +34,9 @@ export default function Vendors() {
     fetchVendors();
   }, []);
 
-  const handleOpenHistory = async (vendor: Vendor) => {
-    setSelectedVendor(vendor);
-    setIsHistoryOpen(true);
-    setHistoryLoading(true);
-    try {
-      const history = await getVendorStockHistory(vendor.id);
-      setStockHistory(history);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetchVendors();
+  }, []);
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,13 +81,14 @@ export default function Vendors() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {vendors.map(vendor => (
-              <div 
+              <Link 
+                href={`/vendors/${vendor.id}`}
                 key={vendor.id} 
-                onClick={() => handleOpenHistory(vendor)}
-                className="bg-white dark:bg-slate-900 p-5 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex flex-col gap-3 group"
+                className="bg-white dark:bg-slate-900 p-5 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-blue-500 transition-all cursor-pointer flex flex-col gap-3 group"
               >
                 <div className="flex justify-between items-start">
                   <h3 className="font-bold text-lg text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{vendor.name}</h3>
+                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors shrink-0" />
                 </div>
                 
                 <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
@@ -123,7 +111,7 @@ export default function Vendors() {
                     </div>
                   )}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
@@ -181,58 +169,6 @@ export default function Vendors() {
             </button>
           </div>
         </form>
-      </Modal>
-
-      <Modal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title="Vendor Profile">
-        {selectedVendor && (
-          <div className="space-y-6">
-            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 md:p-5 rounded-2xl border border-slate-100 dark:border-slate-700">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{selectedVendor.name}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-600 dark:text-slate-300">
-                {selectedVendor.representative_name && (
-                  <div className="flex items-center gap-2"><User className="w-4 h-4 text-slate-400" /> {selectedVendor.representative_name}</div>
-                )}
-                {selectedVendor.contact && (
-                  <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-slate-400" /> {selectedVendor.contact}</div>
-                )}
-                {selectedVendor.address && (
-                  <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-slate-400" /> {selectedVendor.address}</div>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <Package className="w-5 h-5 text-blue-500" /> Stock Intake History
-              </h3>
-              
-              {historyLoading ? (
-                <p className="text-center text-sm text-slate-500 py-6">Loading history...</p>
-              ) : stockHistory.length === 0 ? (
-                <p className="text-center text-sm text-slate-500 py-6 bg-slate-50 dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">No stock history recorded for this vendor.</p>
-              ) : (
-                <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
-                  {stockHistory.map(log => (
-                    <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm gap-3">
-                      <div>
-                        <p className="font-semibold text-slate-900 dark:text-white">{log.product_name || "Unknown Product"}</p>
-                        <p className="text-xs text-slate-500">{format(new Date(log.timestamp), "PP p")}</p>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-lg font-medium">
-                          +{log.quantity_added} Qty
-                        </div>
-                        <div className="text-slate-700 dark:text-slate-300 font-medium">
-                          Rs {Number(log.buy_price).toFixed(2)}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </Modal>
     </div>
   );

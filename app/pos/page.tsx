@@ -287,7 +287,7 @@ export default function POSPage() {
       <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden min-h-0 relative">
         
         {/* CUSTOMER SEARCH BAR (Unified Desktop & Mobile) */}
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 shrink-0 relative z-20" ref={customerSearchRef}>
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 shrink-0 relative z-40" ref={customerSearchRef}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-blue-500" /> Customer
@@ -355,8 +355,8 @@ export default function POSPage() {
 
               {isCustomerSearchOpen && (
                 <>
-                  <div className="fixed inset-0 z-20" onClick={() => setIsCustomerSearchOpen(false)} />
-                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-60 overflow-y-auto z-30 divide-y divide-slate-100 dark:divide-slate-700/50">
+                  <div className="fixed inset-0 z-40" onClick={() => setIsCustomerSearchOpen(false)} />
+                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-60 overflow-y-auto z-50 divide-y divide-slate-100 dark:divide-slate-700/50">
                     <button
                       type="button"
                       onClick={() => handleSelectCustomer(null)}
@@ -492,7 +492,7 @@ export default function POSPage() {
         </div>
 
         {/* HELPER VIEW - No product grid, just search bar above. */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 min-h-0 flex flex-col justify-center items-center text-center">
+        <div className="hidden md:flex flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 min-h-0 flex-col justify-center items-center text-center">
           <div className="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center shadow-inner">
             <Search className="w-8 h-8 opacity-80" />
           </div>
@@ -556,8 +556,8 @@ export default function POSPage() {
             </div>
           ) : (
             cart.map((item) => (
-              <div key={item.product.id} className="flex flex-col bg-slate-50/80 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 transition-all">
-                <div className="flex justify-between items-start gap-2">
+              <div key={item.product.id} className="flex flex-col sm:flex-row bg-slate-50/80 dark:bg-slate-800/40 p-2.5 sm:p-3 rounded-2xl border border-slate-100 dark:border-slate-800 transition-all gap-2 sm:gap-0">
+                <div className="flex justify-between items-start gap-2 flex-1 min-w-0">
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-xs text-slate-900 dark:text-white line-clamp-1">{item.product.name_en}</h4>
                     {item.product.name_ur && (
@@ -566,26 +566,26 @@ export default function POSPage() {
                   </div>
                   <button 
                     onClick={() => removeFromCart(item.product.id)} 
-                    className="text-slate-400 hover:text-red-500 p-1 rounded-md transition-colors"
+                    className="text-slate-400 hover:text-red-500 p-1 sm:hidden rounded-md transition-colors"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
                 
-                <div className="flex justify-between items-center mt-3 pt-2 border-t border-slate-100/80 dark:border-slate-800/60">
-                  <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-0.5">
+                <div className="flex justify-between sm:justify-end items-center mt-1 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100/80 dark:border-slate-800/60 gap-3">
+                  <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 p-0.5">
                     <button 
                       onClick={() => updateQuantity(item.product.id, -1)} 
-                      className="p-1.5 md:p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400"
+                      className="p-1 sm:p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400"
                     >
-                      <Minus className="w-3.5 h-3.5" />
+                      <Minus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     </button>
-                    <span className="font-bold text-xs w-6 text-center text-slate-900 dark:text-white">{item.quantity}</span>
+                    <span className="font-bold text-xs w-5 sm:w-6 text-center text-slate-900 dark:text-white">{item.quantity}</span>
                     <button 
                       onClick={() => updateQuantity(item.product.id, 1)} 
-                      className="p-1.5 md:p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400"
+                      className="p-1 sm:p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400"
                     >
-                      <Plus className="w-3.5 h-3.5" />
+                      <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     </button>
                   </div>
                   
@@ -593,16 +593,23 @@ export default function POSPage() {
                     <div className="font-bold text-sm text-slate-900 dark:text-white">
                       Rs {(getPrice(item) * item.quantity).toFixed(0)}
                     </div>
-                    <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                    <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-400">
                       <span>@ Rs</span>
                       <input 
                         type="number" 
                         value={item.manual_price !== undefined ? item.manual_price : getProductPrice(item.product)}
                         onChange={(e) => updateManualPrice(item.product.id, e.target.value)}
-                        className="w-16 md:w-14 p-1 md:p-0.5 text-[11px] text-right border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 font-medium text-slate-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                        className="w-14 sm:w-16 md:w-14 p-1 md:p-0.5 text-[10px] sm:text-[11px] text-right border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 font-medium text-slate-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                       />
                     </div>
                   </div>
+                  
+                  <button 
+                    onClick={() => removeFromCart(item.product.id)} 
+                    className="hidden sm:block text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors ml-2"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             ))

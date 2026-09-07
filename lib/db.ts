@@ -279,6 +279,12 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
         await browserDb.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin TEXT DEFAULT '0000';`);
         await browserDb.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'Cashier';`);
         await browserDb.exec(`UPDATE users SET pin = '0000' WHERE pin IS NULL;`);
+        
+        await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
         await browserDb.exec(`
           INSERT INTO users (id, username, cnic, pin, role)
           VALUES ('46c2226c-1086-4c31-88bb-daf23d830452', 'Mohsin', '3120352438849', '0000', 'Admin')
@@ -379,6 +385,33 @@ export async function createVendor(vendor: Omit<Vendor, 'id'>): Promise<Vendor> 
     return rows[0];
 }
 
+export async function updateVendor(id: string, vendor: Partial<Vendor>): Promise<Vendor> {
+    const setKeys = [];
+    const params = [];
+    let paramIndex = 1;
+
+    for (const [key, value] of Object.entries(vendor)) {
+        if (key !== 'id') {
+            setKeys.push(`${key} = $${paramIndex}`);
+            params.push(value);
+            paramIndex++;
+        }
+    }
+
+    setKeys.push(`updated_at = NOW()`);
+    params.push(id);
+
+    const sql = `
+        UPDATE vendors 
+        SET ${setKeys.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+    `;
+    
+    const rows = await query<Vendor>(sql, params);
+    return rows[0];
+}
+
 export async function addStockLog(productId: string, vendorId: string, quantity: number, buyPrice: number): Promise<void> {
     const sql = `
         INSERT INTO stock_logs (id, product_id, vendor_id, quantity_added, buy_price)
@@ -457,6 +490,33 @@ export async function createCustomer(customer: Omit<Customer, 'id' | 'total_cred
     const params = [
         customer.full_name, customer.whatsapp_number, customer.address, customer.customer_type || 'Regular'
     ];
+    const rows = await query<Customer>(sql, params);
+    return rows[0];
+}
+
+export async function updateCustomer(id: string, customer: Partial<Customer>): Promise<Customer> {
+    const setKeys = [];
+    const params = [];
+    let paramIndex = 1;
+
+    for (const [key, value] of Object.entries(customer)) {
+        if (key !== 'id' && key !== 'total_credit_balance') {
+            setKeys.push(`${key} = $${paramIndex}`);
+            params.push(value);
+            paramIndex++;
+        }
+    }
+
+    setKeys.push(`updated_at = NOW()`);
+    params.push(id);
+
+    const sql = `
+        UPDATE customers 
+        SET ${setKeys.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+    `;
+    
     const rows = await query<Customer>(sql, params);
     return rows[0];
 }
