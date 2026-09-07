@@ -33,9 +33,18 @@ export function useSync() {
       runSync();
     };
     const handleOffline = () => setStatus("offline");
+    
+    let syncTimeout: any = null;
+    const handleDbMutation = () => {
+      if (syncTimeout) clearTimeout(syncTimeout);
+      syncTimeout = setTimeout(() => {
+        runSync();
+      }, 500); // Debounce sync by 500ms
+    };
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+    window.addEventListener("db-mutation", handleDbMutation);
 
     // 1 hour interval
     const interval = setInterval(runSync, 3600000);
@@ -43,6 +52,8 @@ export function useSync() {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("db-mutation", handleDbMutation);
+      if (syncTimeout) clearTimeout(syncTimeout);
       clearInterval(interval);
     };
   }, []);

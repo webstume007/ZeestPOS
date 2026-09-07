@@ -157,10 +157,13 @@ declare global {
 let browserDb: any = null;
 
 // Generic query wrapper
-export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+export async function query<T = any>(sql: string, params: any[] = [], triggerSyncEvent: boolean = true): Promise<T[]> {
+  const isMutation = triggerSyncEvent && /^(INSERT|UPDATE|DELETE)/i.test(sql.trim());
+
   // 1. Desktop Mode (Electron IPC)
   if (typeof window !== 'undefined' && window.electronAPI) {
     const result = await window.electronAPI.dbQuery(sql, params);
+    if (isMutation) window.dispatchEvent(new Event('db-mutation'));
     return result.rows as T[];
   }
   
@@ -325,6 +328,7 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
     // Execute query on the browser fallback DB
     try {
       const result = await browserDb.query(sql, params);
+      if (isMutation && typeof window !== 'undefined') window.dispatchEvent(new Event('db-mutation'));
       return result.rows as T[];
     } catch (e: any) {
       console.error("Browser DB Query Error:", e);

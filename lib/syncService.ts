@@ -17,7 +17,7 @@ export async function syncDatabase(): Promise<void> {
     for (const table of TABLES) {
       try {
         // Fetch local records modified since last sync
-        const localChanges = await query(`SELECT * FROM ${table} WHERE updated_at > $1`, [lastSynced]);
+        const localChanges = await query(`SELECT * FROM ${table} WHERE updated_at > $1`, [lastSynced], false);
         
         if (localChanges.length > 0) {
           console.log(`[Sync] Pushing ${localChanges.length} records for ${table} to Supabase`);
@@ -89,7 +89,7 @@ export async function syncDatabase(): Promise<void> {
             }
             
             try {
-               await query(finalSql, values);
+               await query(finalSql, values, false);
             } catch (err) {
                // Ignore cash_register duplicates if we can't upsert
                if (table !== 'cash_register') console.error(`[Sync] Local upsert error for ${table}:`, err);
