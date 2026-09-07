@@ -29,6 +29,7 @@ import {
 export default function StockManagement() {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isManageStockOpen, setIsManageStockOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | undefined>();
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
@@ -262,69 +263,84 @@ export default function StockManagement() {
         </div>
       </div>
 
-      {/* Big Top Search Bar */}
-      <div className="relative">
-        <div className="relative flex items-center">
-          <Search className="w-5 h-5 text-slate-400 absolute left-4.5 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search products by English or Urdu name, category, or unit..."
-            className="w-full pl-12 pr-12 py-3.5 text-base font-medium rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all placeholder:text-slate-400"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-4 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              title="Clear search"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+      {/* Manage Stock Toggle Button */}
+      {!isManageStockOpen && (
+        <div className="flex justify-center mt-4">
+          <button
+            onClick={() => setIsManageStockOpen(true)}
+            className="px-8 py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold text-base hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors shadow-lg flex items-center gap-2"
+          >
+            <Search className="w-5 h-5" /> Manage Stock
+          </button>
         </div>
-      </div>
+      )}
 
-      {/* Main Content Area: Default clean state VS Search results */}
-      {!searchQuery.trim() ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center shadow-sm flex-1 flex flex-col items-center justify-center">
-          <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 shadow-inner">
-            <Search className="w-8 h-8" />
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            Search to View &amp; Manage Stock
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mt-2">
-            Type any product name or category in the search bar above to quickly add stock, inspect price history, clone product variations, or edit details.
-          </p>
-
-          {/* Quick category filter tags */}
-          {categoryList.length > 0 && (
-            <div className="mt-6 flex flex-wrap justify-center items-center gap-2 max-w-lg">
-              <span className="text-xs text-slate-400 font-medium mr-1">Quick Browse:</span>
-              {categoryList.map((cat) => (
+      {isManageStockOpen && (
+        <>
+          {/* Big Top Search Bar */}
+          <div className="relative animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="relative flex items-center">
+              <Search className="w-5 h-5 text-slate-400 absolute left-4.5 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products by English or Urdu name, category, or unit..."
+                className="w-full pl-12 pr-12 py-3.5 text-base font-medium rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm hover:border-slate-300 dark:hover:border-slate-700 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all placeholder:text-slate-400"
+                autoFocus
+              />
+              {searchQuery && (
                 <button
-                  key={cat}
-                  onClick={() => setSearchQuery(cat)}
-                  className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-4 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  title="Clear search"
                 >
-                  {cat}
+                  <X className="w-4 h-4" />
                 </button>
-              ))}
+              )}
             </div>
-          )}
+          </div>
 
-          {/* Out of stock note */}
-          {stats.outOfStockCount > 0 && (
-            <div className="mt-8 p-3 px-5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 flex items-center gap-2.5 text-xs text-amber-700 dark:text-amber-300">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>
-                <strong>{stats.outOfStockCount}</strong> product{stats.outOfStockCount > 1 ? "s are" : " is"} currently out of stock.
-              </span>
+          {/* Main Content Area: Default clean state VS Search results */}
+          {!searchQuery.trim() ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center shadow-sm flex-1 flex flex-col items-center justify-center animate-in fade-in">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 shadow-inner">
+                <Search className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                Search to View &amp; Manage Stock
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mt-2">
+                Type any product name or category in the search bar above to quickly add stock, inspect price history, clone product variations, or edit details.
+              </p>
+
+              {/* Quick category filter tags */}
+              {categoryList.length > 0 && (
+                <div className="mt-6 flex flex-wrap justify-center items-center gap-2 max-w-lg">
+                  <span className="text-xs text-slate-400 font-medium mr-1">Quick Browse:</span>
+                  {categoryList.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSearchQuery(cat)}
+                      className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Out of stock note */}
+              {stats.outOfStockCount > 0 && (
+                <div className="mt-8 p-3 px-5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 flex items-center gap-2.5 text-xs text-amber-700 dark:text-amber-300">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>
+                    <strong>{stats.outOfStockCount}</strong> product{stats.outOfStockCount > 1 ? "s are" : " is"} currently out of stock.
+                  </span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ) : (
+          ) : (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm flex-1 overflow-hidden flex flex-col">
           <div className="p-4 px-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -493,6 +509,9 @@ export default function StockManagement() {
             </div>
           </div>
         </div>
+      )}
+      
+        </>
       )}
 
       {/* Product Form Modal (Create, Edit, Clone) */}
