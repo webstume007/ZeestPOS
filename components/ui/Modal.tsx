@@ -6,9 +6,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  size?: "sm" | "md" | "lg";
 }
 
-export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,10 +41,12 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       {/* Modal Content */}
       <div 
         ref={modalRef}
-        className="relative bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] transition-all duration-200 scale-100 opacity-100"
+        className={`relative bg-white dark:bg-slate-900 w-full rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] ${
+          size === "sm" ? "max-w-md" : size === "lg" ? "max-w-3xl" : "max-w-2xl"
+        }`}
       >
-        <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
-          <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">{title}</h2>
+        <div className="flex items-center justify-between p-4 md:p-5 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">{title}</h2>
           <button 
             onClick={onClose}
             className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
@@ -52,7 +55,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
           </button>
         </div>
         
-        <div className="p-6 overflow-y-auto">
+        <div className="p-4 md:p-5 overflow-y-auto">
           {children}
         </div>
       </div>

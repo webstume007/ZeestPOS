@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Package, History, Users, MonitorSpeaker, Settings, Cloud, CloudOff, RefreshCw, DownloadCloud, Truck } from 'lucide-react';
+import { LayoutDashboard, Package, History, Users, MonitorSpeaker, Settings, Truck, DownloadCloud, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Logo } from '@/components/ui/Logo';
 
@@ -39,35 +39,34 @@ export function Sidebar() {
       <div className="p-6">
         <Logo className="w-32 h-auto" />
       </div>
-      <nav className="flex-1 px-4 space-y-2">
-        <Link href="/" className="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          <LayoutDashboard className="w-5 h-5" />
-          <span className="font-medium">Dashboard</span>
-        </Link>
-        <Link href="/stock" className="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          <Package className="w-5 h-5" />
-          <span className="font-medium">Stock Management</span>
-        </Link>
-        <Link href="/sales" className="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          <History className="w-5 h-5" />
-          <span className="font-medium">Sales History</span>
-        </Link>
-        <Link href="/customers" className="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          <Users className="w-5 h-5" />
-          <span className="font-medium">Customers</span>
-        </Link>
-        <Link href="/vendors" className="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          <Truck className="w-5 h-5" />
-          <span className="font-medium">Vendors</span>
-        </Link>
-        <Link href="/register" className="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          <MonitorSpeaker className="w-5 h-5" />
-          <span className="font-medium">Cash Register</span>
-        </Link>
-        <Link href="/settings" className="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          <Settings className="w-5 h-5" />
-          <span className="font-medium">Settings</span>
-        </Link>
+      <nav className="flex-1 px-4 space-y-1">
+        {[
+          { href: "/pos", label: "New Bill", icon: ShoppingCart },
+          { href: "/", label: "Dashboard", icon: LayoutDashboard },
+          { href: "/stock", label: "Stock", icon: Package },
+          { href: "/sales", label: "Sales History", icon: History },
+          { href: "/customers", label: "Customers", icon: Users },
+          { href: "/vendors", label: "Vendors", icon: Truck },
+          { href: "/register", label: "Cash Register", icon: MonitorSpeaker },
+          { href: "/settings", label: "Settings", icon: Settings },
+        ].map((item) => {
+          const Icon = item.icon;
+          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+                active
+                  ? "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-semibold"
+                  : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              <span className="font-medium">{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
 
       {/* User Profile */}

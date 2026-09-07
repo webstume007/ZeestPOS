@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ShoppingCart, Package, History, Users, MonitorSpeaker, Settings, UserCircle, TrendingUp, DollarSign, Box } from "lucide-react";
-import { useShift } from "@/hooks/useShift";
+
 import { getDashboardStats, DashboardStats } from "@/lib/db";
 import { Logo } from "@/components/ui/Logo";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -83,8 +83,24 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <Link
+        href="/pos"
+        className="mb-4 group flex items-center justify-between gap-4 bg-blue-600 hover:bg-blue-700 text-white p-4 md:p-5 rounded-2xl md:rounded-3xl shadow-md shadow-blue-500/20 transition-all"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-white/15 rounded-xl">
+            <ShoppingCart className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-lg md:text-xl font-bold">New Bill</h2>
+            <p className="text-xs text-blue-100">Open POS · search, tap, checkout</p>
+          </div>
+        </div>
+        <span className="text-sm font-semibold bg-white/15 px-3 py-1.5 rounded-xl group-hover:bg-white/25">Open</span>
+      </Link>
+
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 pb-4 md:pb-0">
-        {cards.map((card, idx) => {
+        {cards.filter((card) => card.href !== "/pos").map((card, idx) => {
           const Icon = card.icon;
           return (
             <Link 

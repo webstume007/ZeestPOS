@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { Sale, getSales, getSaleItems, processSaleReturn } from "@/lib/db";
-import { History, Search, FileText, Calendar, DollarSign, Clock, CheckCircle2, AlertCircle, Eye, CornerUpLeft, Printer, X } from "lucide-react";
+import { History, Search, FileText, Calendar, DollarSign, Clock, CheckCircle2, AlertCircle, Eye, CornerUpLeft, X, User } from "lucide-react";
 import { format } from "date-fns";
 import { Modal } from "@/components/ui/Modal";
 import { InvoiceReceipt } from "@/components/pos/InvoiceReceipt";
@@ -264,7 +264,7 @@ export default function SalesHistory() {
                         <div className="font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                           {sale.invoice_number || `${sale.invoice_id.split("-")[0]}`}
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-1">👤 {sale.cashier_id || "Admin"}</div>
+                        <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1"><User className="w-3 h-3" /> {sale.cashier_id || "Admin"}</div>
                       </td>
                       <td className="px-4 py-4 text-xs font-semibold text-slate-900 dark:text-white">
                         {sale.customer_name || "Walk-in Customer"}
@@ -318,22 +318,15 @@ export default function SalesHistory() {
       <Modal isOpen={showInvoice} onClose={() => setShowInvoice(false)} title="View Invoice">
         {selectedSale && saleItems && (
           <div className="space-y-4">
-            <InvoiceReceipt 
-              sale={selectedSale} 
+            <InvoiceReceipt
+              sale={selectedSale}
               items={saleItems.map(si => ({
                 product: si.product,
                 quantity: si.item.quantity,
                 price_applied: si.item.price_applied
-              }))} 
+              }))}
+              onDone={() => setShowInvoice(false)}
             />
-            <div className="flex gap-4">
-              <button onClick={() => { window.print(); }} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                <Printer className="w-5 h-5" /> Print / Share
-              </button>
-              <button onClick={() => setShowInvoice(false)} className="flex-1 py-3 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl font-bold hover:bg-slate-300 transition-colors">
-                Close
-              </button>
-            </div>
           </div>
         )}
       </Modal>

@@ -28,3 +28,33 @@ body {
 .font-urdu {
   font-family: var(--font-urdu), serif;
 }
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-receipt,
+  .print-receipt * {
+    visibility: visible;
+  }
+  .print-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    box-shadow: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
