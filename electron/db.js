@@ -77,6 +77,15 @@ async function initDB() {
         price_applied NUMERIC
     );
 
+    CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY,
+        username TEXT,
+        cnic TEXT UNIQUE,
+        pin TEXT DEFAULT '0000',
+        role TEXT DEFAULT 'Cashier',
+        updated_at TIMESTAMP DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS cash_register (
         shift_id UUID REFERENCES shifts(id),
         cashier_id UUID REFERENCES users(id),
@@ -97,7 +106,7 @@ async function initDB() {
   console.log('Database schema verified/created successfully.');
 
   // Add updated_at columns and triggers if they don't exist
-  const tables = ['products', 'customers', 'sales', 'sale_items', 'cash_register', 'vendors'];
+  const tables = ['products', 'customers', 'sales', 'sale_items', 'cash_register', 'vendors', 'users'];
     
   for (const table of tables) {
     try {
@@ -109,7 +118,9 @@ async function initDB() {
 
   // Phase 10: Auth updates
   try {
-    await db.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin TEXT;`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, username TEXT, cnic TEXT UNIQUE, pin TEXT DEFAULT '0000', role TEXT DEFAULT 'Cashier', updated_at TIMESTAMP DEFAULT NOW());`);
+    await db.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin TEXT DEFAULT '0000';`);
+    await db.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'Cashier';`);
     await db.exec(`UPDATE users SET pin = '0000' WHERE pin IS NULL;`);
   } catch (e) {
     // Ignore if column exists

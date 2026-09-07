@@ -265,6 +265,14 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
         await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS unit TEXT;`);
         await browserDb.exec(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMP DEFAULT NOW());`);
         await browserDb.exec(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, username TEXT, cnic TEXT UNIQUE, pin TEXT DEFAULT '0000', role TEXT DEFAULT 'Cashier', updated_at TIMESTAMP DEFAULT NOW());`);
+        await browserDb.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin TEXT DEFAULT '0000';`);
+        await browserDb.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'Cashier';`);
+        await browserDb.exec(`UPDATE users SET pin = '0000' WHERE pin IS NULL;`);
+        await browserDb.exec(`
+          INSERT INTO users (id, username, cnic, pin, role)
+          VALUES ('46c2226c-1086-4c31-88bb-daf23d830452', 'Mohsin', '3120352438849', '0000', 'Admin')
+          ON CONFLICT (id) DO NOTHING;
+        `);
         await browserDb.exec(`
           CREATE TABLE IF NOT EXISTS stock_logs (
             id UUID PRIMARY KEY,
