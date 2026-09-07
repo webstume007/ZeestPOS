@@ -41,8 +41,13 @@ export default function POSPage() {
   // New features state
   const [discount, setDiscount] = useState(0);
   const [temporaryCustomer, setTemporaryCustomer] = useState("");
+  const [walkinPhone, setWalkinPhone] = useState("");
+  const [showWalkinPhoneInput, setShowWalkinPhoneInput] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
   const [lastInvoiceData, setLastInvoiceData] = useState<any>(null);
+
+  // Keyboard navigation index for product search dropdown
+  const [selectedSearchIndex, setSelectedSearchIndex] = useState<number>(0);
 
   const { shiftId, cashierId } = useShift();
 
@@ -60,6 +65,11 @@ export default function POSPage() {
   useEffect(() => {
     searchInputRef.current?.focus();
   }, []);
+
+  // Reset selected search item index when query changes
+  useEffect(() => {
+    setSelectedSearchIndex(0);
+  }, [searchQuery]);
 
   // Fuzzy Search setup for products
   const fuse = new Fuse(products, {
@@ -111,18 +121,38 @@ export default function POSPage() {
     if (Number(product.current_stock) <= 0) return;
     addToCart(product);
     setSearchQuery("");
+    setSelectedSearchIndex(0);
     // Re-focus search bar for rapid scanning / continuous typing
     setTimeout(() => {
       searchInputRef.current?.focus();
     }, 20);
   };
 
-  // Keyboard navigation on search input: Enter selects the top match
+  // Keyboard navigation on search input: Arrow keys navigate dropdown, Enter selects
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (searchResults.length === 0) return;
+
+    if (e.key === "ArrowDown") {
       e.preventDefault();
-      if (searchResults.length > 0) {
-        handleProductSelect(searchResults[0]);
+      setSelectedSearchIndex((prev) => {
+        const next = prev < searchResults.length - 1 ? prev + 1 : 0;
+        const targetEl = document.getElementById(`search-result-item-${next}`);
+        targetEl?.scrollIntoView({ block: "nearest" });
+        return next;
+      });
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedSearchIndex((prev) => {
+        const next = prev > 0 ? prev - 1 : searchResults.length - 1;
+        const targetEl = document.getElementById(`search-result-item-${next}`);
+        targetEl?.scrollIntoView({ block: "nearest" });
+        return next;
+      });
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const target = searchResults[selectedSearchIndex] || searchResults[0];
+      if (target) {
+        handleProductSelect(target);
       }
     } else if (e.key === "Escape") {
       setSearchQuery("");
@@ -237,7 +267,7 @@ export default function POSPage() {
         date,
         cashierName: localStorage.getItem("cashierName") || "Cashier",
         customerObj: selectedCustomer,
-        customerPhone: isTemporary ? "" : (selectedCustomer?.whatsapp_number || "")
+        customerPhone: selectedCustomer ? (selectedCustomer.whatsapp_number || "") : (walkinPhone.trim() || "")
       });
       setShowInvoice(true);
 
@@ -249,6 +279,8 @@ export default function POSPage() {
       setAmountPaidNow(0);
       setDiscount(0);
       setTemporaryCustomer("");
+      setWalkinPhone("");
+      setShowWalkinPhoneInput(false);
       
       // Refresh stock & customers
       const p = await getProducts();
@@ -393,14 +425,14 @@ export default function POSPage() {
           )}
         </div>
 
-        {/* 2. PRODUCT SEARCH BAR (Round-cornered, does not touch right and left boxes) */}
-        <div className="p-4 lg:p-6 pb-4 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
+        {/* 2. PRODUCT SEARCH BAR: Round-cornered, floating dropdown attached directly below */}
+        <div className="p-4 lg:p-6 pb-4 border-b border-slate-100 dark:border-slate-800/80 shrink-0 relative z-30">
           <div className="relative w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-500" />
             <input 
               ref={searchInputRef}
               type="text" 
-              placeholder="Search products by English or Urdu name... (Press Enter to add)"
+              placeholder="Search products (English or اردو)... (↓/↑ to scroll, Enter to add)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyDown}
@@ -415,93 +447,105 @@ export default function POSPage() {
                 <X className="w-4 h-4" />
               </button>
             )}
+
+            {/* PRODUCT SEARCH DROPDOWN: Shows exactly below along with the search bar */}
+            {searchQuery.trim().length > 0 && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setSearchQuery("")} 
+                />
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-h-96 overflow-y-auto z-50 divide-y divide-slate-100 dark:divide-slate-700/60 animate-in fade-in slide-in-from-top-2 duration-150">
+                  {searchResults.length === 0 ? (
+                    <div className="p-6 text-center text-slate-400 space-y-1">
+                      <p className="text-sm font-medium">No products found for "{searchQuery}"</p>
+                      <p className="text-xs text-slate-400">Check spelling or try Urdu name (اردو)</p>
+                    </div>
+                  ) : (
+                    searchResults.map((product, idx) => {
+                      const inStock = Number(product.current_stock) > 0;
+                      const isSelected = idx === selectedSearchIndex;
+                      return (
+                        <button
+                          key={product.id}
+                          id={`search-result-item-${idx}`}
+                          type="button"
+                          onClick={() => handleProductSelect(product)}
+                          onMouseEnter={() => setSelectedSearchIndex(idx)}
+                          disabled={!inStock}
+                          className={`w-full flex items-center justify-between text-left p-3.5 transition-all ${
+                            isSelected 
+                              ? "bg-blue-50/90 dark:bg-blue-950/60 border-l-4 border-blue-600 pl-3 text-blue-900 dark:text-blue-100" 
+                              : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                          } ${!inStock ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          <div className="flex-1 pr-3 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-semibold text-sm truncate ${isSelected ? "text-blue-700 dark:text-blue-300 font-bold" : "text-slate-900 dark:text-white"}`}>
+                                {product.name_en}
+                              </span>
+                              {product.unit && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 font-medium shrink-0">
+                                  {product.unit}
+                                </span>
+                              )}
+                            </div>
+                            {product.name_ur && (
+                              <div className="font-urdu text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate" dir="rtl">
+                                {product.name_ur}
+                              </div>
+                            )}
+                            <div className="mt-1 text-[11px] text-slate-400">
+                              Stock: <span className={inStock ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-red-500 font-semibold"}>{product.current_stock}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 shrink-0">
+                            <div className="flex flex-col items-end">
+                              <div className="flex items-center gap-1 text-xs">
+                                <span className="text-[10px] text-slate-400">Retail:</span>
+                                <span className="font-bold text-slate-900 dark:text-white">Rs {Number(product.retail_price).toFixed(0)}</span>
+                              </div>
+                              {product.wholesale_shopkeeper_price ? (
+                                <div className="flex items-center gap-1 text-[11px]">
+                                  <span className="text-[10px] text-blue-500">Wholesale:</span>
+                                  <span className="font-semibold text-blue-600 dark:text-blue-400">Rs {Number(product.wholesale_shopkeeper_price).toFixed(0)}</span>
+                                </div>
+                              ) : null}
+                            </div>
+
+                            <div className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+                              isSelected ? "bg-blue-600 text-white shadow-sm" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                            }`}>
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Add (↵)</span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* 3. PRODUCT SEARCH RESULTS OR CLEAN READY-STATE (Normally products will NOT show below) */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-3 min-h-0">
-          {searchQuery.trim().length > 0 ? (
-            // Products ONLY show when searched
-            searchResults.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-3 py-16">
-                <Search className="w-12 h-12 opacity-25" />
-                <p className="text-sm font-medium">No products found for "{searchQuery}"</p>
-                <p className="text-xs text-slate-400">Check spelling or try searching in Urdu (اردو)</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                {searchResults.map((product) => {
-                  const inStock = Number(product.current_stock) > 0;
-                  return (
-                    <button
-                      key={product.id}
-                      onClick={() => handleProductSelect(product)}
-                      disabled={!inStock}
-                      className={`flex items-center justify-between text-left p-3.5 rounded-2xl border transition-all duration-150 ${
-                        inStock 
-                          ? "bg-slate-50/80 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 hover:shadow-sm cursor-pointer group" 
-                          : "bg-slate-100/50 dark:bg-slate-900/40 border-slate-200/40 dark:border-slate-800/40 opacity-40 cursor-not-allowed"
-                      }`}
-                    >
-                      <div className="flex-1 pr-3">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            {product.name_en}
-                          </h3>
-                          {product.unit && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 font-medium">
-                              {product.unit}
-                            </span>
-                          )}
-                        </div>
-                        {product.name_ur && (
-                          <h4 className="font-urdu text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1" dir="rtl">
-                            {product.name_ur}
-                          </h4>
-                        )}
-                        <div className="mt-1.5 text-[11px] font-medium text-slate-500">
-                          Stock: <span className={inStock ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-red-500 font-semibold"}>{product.current_stock}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col items-end gap-0.5 shrink-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-slate-400">Retail</span>
-                          <span className="text-sm font-bold text-slate-900 dark:text-white">Rs {Number(product.retail_price).toFixed(0)}</span>
-                        </div>
-                        {product.wholesale_shopkeeper_price ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] text-blue-500">Wholesale</span>
-                            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Rs {Number(product.wholesale_shopkeeper_price).toFixed(0)}</span>
-                          </div>
-                        ) : null}
-                        <span className="mt-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-                          <Plus className="w-3 h-3" /> Add to Bill
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )
-          ) : (
-            // NORMALLY BELOW PRODUCTS WILL NOT SHOW (Clean professional workspace)
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 py-16 px-6 text-center">
-              <div className="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center shadow-inner">
-                <Search className="w-8 h-8 opacity-80" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="font-bold text-slate-800 dark:text-slate-200 text-base">Quick Search & Billing</h3>
-                <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
-                  Type any product name or scan barcode in the search bar above. Click or press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-mono">Enter</kbd> to add items directly to the bill.
-                </p>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 dark:bg-slate-800/60 px-3.5 py-2 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>Products display only when searched</span>
-              </div>
-            </div>
-          )}
+        {/* 3. DESKTOP WORKSPACE BODY: Clean professional helper/status */}
+        <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 min-h-0 flex flex-col justify-center items-center text-center">
+          <div className="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center shadow-inner">
+            <Search className="w-8 h-8 opacity-80" />
+          </div>
+          <div className="space-y-1.5 max-w-sm">
+            <h3 className="font-bold text-slate-800 dark:text-slate-200 text-base">Quick Search & Keyboard Billing</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Type product name or scan barcode above. Use <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-mono">↓</kbd> <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-mono">↑</kbd> arrow keys to scroll, and press <kbd className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold">Enter</kbd> to add directly to the bill.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 dark:bg-slate-800/60 px-3.5 py-2 rounded-xl border border-slate-200/60 dark:border-slate-800">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span>Search dropdown shows directly under the search bar</span>
+          </div>
         </div>
       </div>
 
@@ -716,153 +760,153 @@ export default function POSPage() {
                 <X className="w-4 h-4" />
               </button>
             )}
+
+            {/* Mobile Product Search Dropdown directly below search input */}
+            {searchQuery.trim().length > 0 && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setSearchQuery("")} />
+                <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-h-72 overflow-y-auto z-50 divide-y divide-slate-100 dark:divide-slate-700/60 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {searchResults.length === 0 ? (
+                    <div className="p-4 text-center text-slate-400 text-xs">
+                      No products found for "{searchQuery}"
+                    </div>
+                  ) : (
+                    searchResults.map((product, idx) => {
+                      const inStock = Number(product.current_stock) > 0;
+                      const isSelected = idx === selectedSearchIndex;
+                      return (
+                        <button
+                          key={product.id}
+                          id={`search-result-item-mob-${idx}`}
+                          type="button"
+                          onClick={() => handleProductSelect(product)}
+                          disabled={!inStock}
+                          className={`w-full flex items-center justify-between p-3 text-left transition-colors ${
+                            isSelected ? "bg-blue-50 dark:bg-blue-950/50" : "hover:bg-slate-50 dark:hover:bg-slate-700"
+                          } ${!inStock ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          <div className="flex-1 pr-2 min-w-0">
+                            <div className="font-semibold text-xs text-slate-900 dark:text-white truncate">{product.name_en}</div>
+                            {product.name_ur && (
+                              <div className="font-urdu text-[11px] text-slate-500 truncate" dir="rtl">{product.name_ur}</div>
+                            )}
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              Stock: <span className={inStock ? "text-emerald-600 font-semibold" : "text-red-500"}>{product.current_stock}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="text-right flex items-center gap-2 shrink-0">
+                            <div className="flex flex-col items-end">
+                              <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                Rs {Number(product[pricingTier] || product.retail_price).toFixed(0)}
+                              </span>
+                            </div>
+                            <span className="text-[10px] px-2 py-1 rounded-lg bg-blue-600 text-white font-bold flex items-center gap-0.5">
+                              <Plus className="w-3 h-3" /> Add
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* MIDDLE CONTENT: While searching -> Search Results; When not searching -> Current Bill (added items) */}
+        {/* MIDDLE CONTENT: Current Bill / Added Products with editable prices */}
         <div className="flex-1 overflow-y-auto min-h-0 p-3 space-y-2.5">
-          {searchQuery.trim().length > 0 ? (
-            // Active Search Results
-            <div className="space-y-2">
-              <div className="flex items-center justify-between pb-1 px-1">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Search Results ({searchResults.length})
+          <div className="space-y-2">
+            <div className="flex items-center justify-between pb-1 px-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Current Bill ({cart.reduce((sum, item) => sum + item.quantity, 0)} items)
                 </span>
-                <button 
-                  onClick={() => { setSearchQuery(""); searchInputRef.current?.focus(); }}
-                  className="text-xs text-blue-600 dark:text-blue-400 font-semibold"
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <select
+                  value={pricingTier}
+                  onChange={(e) => setPricingTier(e.target.value as PricingTier)}
+                  className="p-1 px-2 text-[11px] font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-none outline-none"
                 >
-                  View Bill ({cart.length})
-                </button>
-              </div>
-
-              {searchResults.length === 0 ? (
-                <div className="py-8 text-center text-slate-400 text-sm">
-                  No products found for "{searchQuery}"
-                </div>
-              ) : (
-                searchResults.map((product) => {
-                  const inStock = Number(product.current_stock) > 0;
-                  return (
-                    <button
-                      key={product.id}
-                      onClick={() => handleProductSelect(product)}
-                      disabled={!inStock}
-                      className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-colors ${
-                        inStock 
-                          ? "bg-slate-50 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700 active:bg-blue-50 dark:active:bg-blue-950/40" 
-                          : "opacity-40 bg-slate-100 dark:bg-slate-900 border-slate-200"
-                      }`}
-                    >
-                      <div className="flex-1 pr-2">
-                        <div className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1">{product.name_en}</div>
-                        {product.name_ur && (
-                          <div className="font-urdu text-xs text-slate-500 mt-0.5 line-clamp-1" dir="rtl">{product.name_ur}</div>
-                        )}
-                        <div className="text-[11px] text-slate-500 mt-1">
-                          Stock: <span className={inStock ? "text-emerald-600 font-semibold" : "text-red-500 font-semibold"}>{product.current_stock}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="text-right flex flex-col items-end gap-1 shrink-0">
-                        <div className="text-sm font-bold text-slate-900 dark:text-white">
-                          Rs {Number(product[pricingTier] || product.retail_price).toFixed(0)}
-                        </div>
-                        <span className="text-[11px] px-2 py-0.5 rounded-lg bg-blue-600 text-white font-semibold flex items-center gap-0.5">
-                          <Plus className="w-3 h-3" /> Add
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          ) : (
-            // Current Bill / Added Products (Shows below search bar)
-            <div className="space-y-2">
-              <div className="flex items-center justify-between pb-1 px-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                    Current Bill ({cart.reduce((sum, item) => sum + item.quantity, 0)} items)
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <select
-                    value={pricingTier}
-                    onChange={(e) => setPricingTier(e.target.value as PricingTier)}
-                    className="p-1 px-2 text-[11px] font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-none outline-none"
+                  <option value="retail_price">Retail</option>
+                  <option value="wholesale_shopkeeper_price">Wholesale</option>
+                </select>
+                {cart.length > 0 && (
+                  <button 
+                    onClick={clearBill}
+                    className="text-[11px] text-red-500 hover:text-red-600 font-semibold"
                   >
-                    <option value="retail_price">Retail</option>
-                    <option value="wholesale_shopkeeper_price">Wholesale</option>
-                  </select>
-                  {cart.length > 0 && (
-                    <button 
-                      onClick={clearBill}
-                      className="text-[11px] text-red-500 hover:text-red-600 font-semibold"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
+                    Clear
+                  </button>
+                )}
               </div>
+            </div>
 
-              {cart.length === 0 ? (
-                <div className="py-12 flex flex-col items-center justify-center text-slate-400 space-y-3">
-                  <Search className="w-10 h-10 opacity-25" />
-                  <p className="text-xs text-center max-w-xs leading-relaxed">
-                    Search any product above to start adding to your bill.
-                  </p>
-                </div>
-              ) : (
-                cart.map((item) => (
-                  <div key={item.product.id} className="flex flex-col bg-slate-50/90 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-xs text-slate-900 dark:text-white line-clamp-1">{item.product.name_en}</h4>
-                        {item.product.name_ur && (
-                          <p className="font-urdu text-[11px] text-slate-500 line-clamp-1" dir="rtl">{item.product.name_ur}</p>
-                        )}
-                      </div>
+            {cart.length === 0 ? (
+              <div className="py-12 flex flex-col items-center justify-center text-slate-400 space-y-3">
+                <Search className="w-10 h-10 opacity-25" />
+                <p className="text-xs text-center max-w-xs leading-relaxed">
+                  Search any product above to start adding to your bill.
+                </p>
+              </div>
+            ) : (
+              cart.map((item) => (
+                <div key={item.product.id} className="flex flex-col bg-slate-50/90 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-xs text-slate-900 dark:text-white line-clamp-1">{item.product.name_en}</h4>
+                      {item.product.name_ur && (
+                        <p className="font-urdu text-[11px] text-slate-500 line-clamp-1" dir="rtl">{item.product.name_ur}</p>
+                      )}
+                    </div>
+                    <button 
+                      onClick={() => removeFromCart(item.product.id)} 
+                      className="text-slate-400 hover:text-red-500 p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  
+                  <div className="flex justify-between items-center mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                    <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 p-0.5">
                       <button 
-                        onClick={() => removeFromCart(item.product.id)} 
-                        className="text-slate-400 hover:text-red-500 p-0.5"
+                        onClick={() => updateQuantity(item.product.id, -1)} 
+                        className="p-1 rounded text-slate-600 dark:text-slate-400"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="font-bold text-xs w-5 text-center text-slate-900 dark:text-white">{item.quantity}</span>
+                      <button 
+                        onClick={() => updateQuantity(item.product.id, 1)} 
+                        className="p-1 rounded text-slate-600 dark:text-slate-400"
+                      >
+                        <Plus className="w-3 h-3" />
                       </button>
                     </div>
                     
-                    <div className="flex justify-between items-center mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-800">
-                      <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 p-0.5">
-                        <button 
-                          onClick={() => updateQuantity(item.product.id, -1)} 
-                          className="p-1 rounded text-slate-600 dark:text-slate-400"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="font-bold text-xs w-5 text-center text-slate-900 dark:text-white">{item.quantity}</span>
-                        <button 
-                          onClick={() => updateQuantity(item.product.id, 1)} 
-                          className="p-1 rounded text-slate-600 dark:text-slate-400"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                      
-                      <div className="text-right">
-                        <span className="font-bold text-sm text-slate-900 dark:text-white">
-                          Rs {(getPrice(item) * item.quantity).toFixed(0)}
-                        </span>
-                        <span className="text-[10px] text-slate-400 ml-1.5">
-                          (@ Rs {getPrice(item).toFixed(0)})
-                        </span>
+                    {/* Mobile Manual Price Adjustment */}
+                    <div className="text-right flex flex-col items-end">
+                      <span className="font-bold text-sm text-slate-900 dark:text-white">
+                        Rs {(getPrice(item) * item.quantity).toFixed(0)}
+                      </span>
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        <span>@ Rs</span>
+                        <input 
+                          type="number" 
+                          value={item.manual_price !== undefined ? item.manual_price : getProductPrice(item.product)}
+                          onChange={(e) => updateManualPrice(item.product.id, e.target.value)}
+                          className="w-16 py-0.5 px-1 text-[11px] text-right border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 font-semibold text-slate-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
                       </div>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          )}
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Bottom Checkout Section: Always 100% visible on screen, no scrolling needed */}
@@ -993,15 +1037,54 @@ export default function POSPage() {
           ) : (
             <div className="space-y-4 mb-6">
               {!selectedCustomer && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Walk-in Customer Name (Optional)</label>
-                  <input 
-                    type="text"
-                    value={temporaryCustomer}
-                    onChange={(e) => setTemporaryCustomer(e.target.value)}
-                    placeholder="e.g. Walk-in Customer"
-                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Walk-in Customer Name (Optional)</label>
+                    <input 
+                      type="text"
+                      value={temporaryCustomer}
+                      onChange={(e) => setTemporaryCustomer(e.target.value)}
+                      placeholder="e.g. Cash Customer / Walk-in"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    />
+                  </div>
+
+                  {/* Button to Add Walk-In Customer Phone */}
+                  {!showWalkinPhoneInput && !walkinPhone ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowWalkinPhoneInput(true)}
+                      className="w-full py-2.5 px-3 rounded-xl border border-dashed border-blue-300 dark:border-blue-700/80 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/30 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      + Add Walk-In Customer Phone
+                    </button>
+                  ) : (
+                    <div className="space-y-1.5 p-3 rounded-xl bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-blue-900 dark:text-blue-300 flex items-center gap-1">
+                          <Phone className="w-3.5 h-3.5 text-blue-500" /> Walk-In Customer Phone / WhatsApp
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setWalkinPhone("");
+                            setShowWalkinPhoneInput(false);
+                          }}
+                          className="text-[11px] text-red-500 hover:text-red-600 font-semibold"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <input 
+                        type="text"
+                        value={walkinPhone}
+                        onChange={(e) => setWalkinPhone(e.target.value)}
+                        placeholder="e.g. 03001234567"
+                        className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
