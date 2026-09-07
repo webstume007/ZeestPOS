@@ -35,7 +35,7 @@ export default function Dashboard() {
 
   return (
     <div className="p-3 md:p-6 max-w-7xl mx-auto h-full flex flex-col">
-      <div className="mb-4 flex flex-col justify-center items-center gap-1 mt-6 text-center">
+      <div className="hidden md:flex mb-4 flex-col justify-center items-center gap-1 mt-6 text-center">
         <Logo className="w-32 sm:w-40 h-auto" />
         <p className="text-xs sm:text-sm text-slate-500 font-medium mt-2">Main Bazar Chunnawala</p>
       </div>
@@ -83,35 +83,25 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <Link
-        href="/pos"
-        className="mb-4 group flex items-center justify-between gap-4 bg-blue-600 hover:bg-blue-700 text-white p-4 md:p-5 rounded-2xl md:rounded-3xl shadow-md shadow-blue-500/20 transition-all"
-      >
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-white/15 rounded-xl">
-            <ShoppingCart className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-lg md:text-xl font-bold">New Bill</h2>
-            <p className="text-xs text-blue-100">Open POS · search, tap, checkout</p>
-          </div>
-        </div>
-        <span className="text-sm font-semibold bg-white/15 px-3 py-1.5 rounded-xl group-hover:bg-white/25">Open</span>
-      </Link>
-
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 pb-4 md:pb-0">
-        {cards.filter((card) => card.href !== "/pos").map((card, idx) => {
+        {cards.map((card, idx) => {
           const Icon = card.icon;
+          const isNewBill = card.href === "/pos";
+          
           return (
             <Link 
               key={idx} 
               href={card.href}
-              className="group bg-white dark:bg-slate-900 p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:scale-[1.02] transition-all duration-200 flex flex-col items-center justify-center text-center gap-2 md:gap-3"
+              className={`group p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border hover:shadow-xl hover:scale-[1.02] transition-all duration-200 flex flex-col items-center justify-center text-center gap-2 md:gap-3 ${
+                isNewBill 
+                  ? "bg-emerald-600 border-emerald-500 text-white" 
+                  : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-800 dark:text-slate-100"
+              }`}
             >
-              <div className={`${card.color} text-white p-2 md:p-3 rounded-xl shadow-sm group-hover:scale-110 transition-transform duration-200`}>
+              <div className={`${isNewBill ? "bg-white/20 text-white" : `${card.color} text-white`} p-2 md:p-3 rounded-xl shadow-sm group-hover:scale-110 transition-transform duration-200`}>
                 <Icon className="w-5 h-5 md:w-6 md:h-6" strokeWidth={2} />
               </div>
-              <h2 className="text-sm md:text-lg font-semibold text-slate-800 dark:text-slate-100">{card.title}</h2>
+              <h2 className="text-sm md:text-lg font-semibold">{card.title}</h2>
             </Link>
           );
         })}

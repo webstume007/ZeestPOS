@@ -1024,6 +1024,15 @@ export default function POSPage() {
             />
           </div>
           <div>
+            <label className="block text-sm font-medium mb-1">Address</label>
+            <input
+              type="text"
+              value={newCustomer.address}
+              onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium mb-1">Customer Type</label>
             <select
               value={newCustomer.customer_type}

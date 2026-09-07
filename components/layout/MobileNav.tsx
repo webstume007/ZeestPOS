@@ -12,48 +12,63 @@ export function MobileNav() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { user, logout } = useAuth();
 
-  if (pathname === "/login" || pathname === "/") return null;
+  if (pathname === "/login") return null;
 
   return (
     <>
       {/* Top Navigation */}
-      <div className="mobile-nav-visible md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-50 px-6 py-3 flex justify-between items-center shadow-sm">
-        <Link 
-          href="/" 
-          className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-        >
-          <LayoutDashboard className="w-5 h-5 sm:w-6 sm:h-6" />
-          <span className="text-[10px] font-medium">Home</span>
-        </Link>
-        <Link 
-          href="/pos" 
-          className={`flex flex-col items-center gap-1 ${pathname === "/pos" ? "text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"}`}
-        >
-          <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
-          <span className="text-[10px] font-medium">New Bill</span>
-        </Link>
-        <Link 
-          href="/sales" 
-          className={`flex flex-col items-center gap-1 ${pathname === "/sales" ? "text-amber-600 dark:text-amber-400" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"}`}
-        >
-          <History className="w-5 h-5 sm:w-6 sm:h-6" />
-          <span className="text-[10px] font-medium">History</span>
-        </Link>
-        <Link 
-          href="/stock" 
-          className={`flex flex-col items-center gap-1 ${pathname === "/stock" ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"}`}
-        >
-          <Package className="w-5 h-5 sm:w-6 sm:h-6" />
-          <span className="text-[10px] font-medium">Stock</span>
-        </Link>
-        <button 
-          onClick={() => setIsDrawerOpen(true)}
-          className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-        >
-          <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
-          <span className="text-[10px] font-medium">More</span>
-        </button>
-      </div>
+      {pathname === "/" ? (
+        <div className="mobile-nav-visible md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-50 px-4 py-3 flex justify-between items-center shadow-sm">
+          <div className="flex flex-col">
+            <Logo className="w-24 h-auto" />
+            <p className="text-[10px] text-slate-500 font-medium">Main Bazar Chunnawala</p>
+          </div>
+          <button 
+            onClick={() => setIsDrawerOpen(true)}
+            className="p-2 -mr-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+        </div>
+      ) : (
+        <div className="mobile-nav-visible md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-50 px-6 py-3 flex justify-between items-center shadow-sm">
+          <Link 
+            href="/" 
+            className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+          >
+            <LayoutDashboard className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-[10px] font-medium">Home</span>
+          </Link>
+          <Link 
+            href="/pos" 
+            className={`flex flex-col items-center gap-1 ${pathname === "/pos" ? "text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"}`}
+          >
+            <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-[10px] font-medium">New Bill</span>
+          </Link>
+          <Link 
+            href="/sales" 
+            className={`flex flex-col items-center gap-1 ${pathname === "/sales" ? "text-amber-600 dark:text-amber-400" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"}`}
+          >
+            <History className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-[10px] font-medium">History</span>
+          </Link>
+          <Link 
+            href="/stock" 
+            className={`flex flex-col items-center gap-1 ${pathname === "/stock" ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"}`}
+          >
+            <Package className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-[10px] font-medium">Stock</span>
+          </Link>
+          <button 
+            onClick={() => setIsDrawerOpen(true)}
+            className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+          >
+            <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-[10px] font-medium">More</span>
+          </button>
+        </div>
+      )}
 
       {/* Side Drawer for "More" */}
       {isDrawerOpen && (

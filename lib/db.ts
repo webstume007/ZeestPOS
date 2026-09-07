@@ -283,21 +283,6 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
         await browserDb.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'Cashier';`);
         await browserDb.exec(`UPDATE users SET pin = '0000' WHERE pin IS NULL;`);
         
-        await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE stock_logs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE cash_register ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE customer_transactions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`
-          INSERT INTO users (id, username, cnic, pin, role)
-          VALUES ('46c2226c-1086-4c31-88bb-daf23d830452', 'Mohsin', '3120352438849', '0000', 'Admin')
-          ON CONFLICT (id) DO NOTHING;
-        `);
         await browserDb.exec(`
           CREATE TABLE IF NOT EXISTS stock_logs (
             id UUID PRIMARY KEY,
@@ -318,6 +303,23 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
             timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
           );
         `);
+        
+        await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE stock_logs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE cash_register ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`ALTER TABLE customer_transactions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        await browserDb.exec(`
+          INSERT INTO users (id, username, cnic, pin, role)
+          VALUES ('46c2226c-1086-4c31-88bb-daf23d830452', 'Mohsin', '3120352438849', '0000', 'Admin')
+          ON CONFLICT (id) DO NOTHING;
+        `);
+
       } catch (e: any) {
         console.error("Failed to initialize browser DB", e);
         if (typeof window !== 'undefined') alert(`DB Boot Error: ${e.message}`);
