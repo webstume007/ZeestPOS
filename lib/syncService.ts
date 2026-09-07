@@ -97,20 +97,24 @@ export async function syncDatabase(): Promise<void> {
         if (remoteChanges && remoteChanges.length > 0) {
           console.log(`[Sync] Pulling ${remoteChanges.length} records for ${table} from Supabase`);
           
-          for (const record of remoteChanges) {
-            const columns = Object.keys(record);
-            const values = Object.values(record);
-            const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
-            const setClause = columns.map((col, i) => `${col} = EXCLUDED.${col}`).join(', ');
+          // Batch process records in chunks of 50 to maximize speed and avoid parameter limits
+          const CHUNK_SIZE = 50;
+          for (let i = 0; i < remoteChanges.length; i += CHUNK_SIZE) {
+            const chunk = remoteChanges.slice(i, i + CHUNK_SIZE);
+            // Use columns from the first record in the chunk
+            const columns = Object.keys(chunk[0]);
             
-            // Upsert into local PGlite
-            const sql = `
-              INSERT INTO ${table} (${columns.join(', ')})
-              VALUES (${placeholders})
-              ON CONFLICT (id) 
-              ${table === 'sales' || table === 'cash_register' ? 'DO NOTHING' : `DO UPDATE SET ${setClause}`}
-            `;
+            const allValues: any[] = [];
+            const valueStrings = chunk.map((record, rowIndex) => {
+              const recordValues = columns.map(col => record[col]);
+              allValues.push(...recordValues);
+              
+              const startIdx = rowIndex * columns.length + 1;
+              const placeholders = columns.map((_, colIdx) => `$${startIdx + colIdx}`).join(', ');
+              return `(${placeholders})`;
+            });
             
+            const setClause = columns.map(col => `${col} = EXCLUDED.${col}`).join(', ');
             let primaryKey = 'id';
             if (table === 'sales') primaryKey = 'invoice_id';
             
@@ -118,23 +122,25 @@ export async function syncDatabase(): Promise<void> {
             if (table === 'cash_register') {
                finalSql = `
                  INSERT INTO ${table} (${columns.join(', ')})
-                 VALUES (${placeholders})
+                 VALUES ${valueStrings.join(', ')}
                `;
             } else {
                finalSql = `
                 INSERT INTO ${table} (${columns.join(', ')})
-                VALUES (${placeholders})
+                VALUES ${valueStrings.join(', ')}
                 ON CONFLICT (${primaryKey}) 
                 DO UPDATE SET ${setClause}
               `;
             }
             
             try {
-               await query(finalSql, values, false);
+               await query(finalSql, allValues, false);
             } catch (err: any) {
+               console.error(`[Sync] Local batch upsert error for ${table} at chunk ${i}:`, err);
+               // If batch fails (e.g. missing column in local fallback db), log it but don't crash
                if (table !== 'cash_register') {
-                 console.error(`[Sync] Local upsert error for ${table}:`, err);
-                 // We don't necessarily fail the whole sync for one record, but we can log it.
+                 syncErrors.push(`Local batch upsert error (${table}): ${err.message}`);
+                 hasErrors = true;
                }
             }
           }

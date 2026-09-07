@@ -271,6 +271,7 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
           );
         `);
         await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS vendor_id UUID;`);
+        await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_customer_price NUMERIC;`);
         await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name TEXT;`);
         await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_amount NUMERIC DEFAULT 0;`);
         await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_number TEXT;`);
