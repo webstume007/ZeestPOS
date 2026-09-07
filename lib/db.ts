@@ -320,6 +320,31 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
           ON CONFLICT (id) DO NOTHING;
         `);
 
+        await browserDb.exec(`
+          CREATE OR REPLACE FUNCTION trigger_set_updated_at()
+          RETURNS TRIGGER AS $$
+          BEGIN
+            NEW.updated_at = NOW();
+            RETURN NEW;
+          END;
+          $$ LANGUAGE plpgsql;
+        `);
+
+        const triggerTables = ['products', 'customers', 'sales', 'sale_items', 'cash_register', 'vendors', 'users', 'stock_logs', 'settings', 'customer_transactions'];
+        for (const table of triggerTables) {
+          try {
+            await browserDb.exec(`
+              DROP TRIGGER IF EXISTS set_updated_at ON ${table};
+              CREATE TRIGGER set_updated_at
+              BEFORE UPDATE ON ${table}
+              FOR EACH ROW
+              EXECUTE FUNCTION trigger_set_updated_at();
+            `);
+          } catch (e) {
+            console.error(\`Failed to create trigger for \${table}\`, e);
+          }
+        }
+
       } catch (e: any) {
         console.error("Failed to initialize browser DB", e);
         if (typeof window !== 'undefined') alert(`DB Boot Error: ${e.message}`);

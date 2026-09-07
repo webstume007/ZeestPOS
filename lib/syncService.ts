@@ -11,24 +11,27 @@ export async function syncDatabase(): Promise<void> {
   const syncStartTime = new Date().toISOString();
 
   let hasErrors = false;
+  let syncErrors: string[] = [];
 
   try {
     // 1. PUSH LOGIC (Local -> Remote)
     for (const table of TABLES) {
       try {
         // Fetch local records modified since last sync
-        const localChanges = await query(`SELECT * FROM ${table} WHERE updated_at > $1`, [lastSynced], false);
+        const localChanges = await query(`SELECT * FROM ${table} WHERE updated_at > $1 OR updated_at IS NULL`, [lastSynced], false);
         
         if (localChanges.length > 0) {
           console.log(`[Sync] Pushing ${localChanges.length} records for ${table} to Supabase`);
           const { error } = await supabase.from(table).upsert(localChanges);
           if (error) {
             console.error(`[Sync] Supabase push error for ${table}:`, error);
+            syncErrors.push(`Push error (${table}): ${error.message || JSON.stringify(error)}`);
             hasErrors = true;
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(`[Sync] Local read error for ${table}:`, err);
+        syncErrors.push(`Local read error (${table}): ${err.message || 'Unknown error'}`);
         hasErrors = true;
       }
     }
@@ -44,6 +47,7 @@ export async function syncDatabase(): Promise<void> {
 
         if (error) {
           console.error(`[Sync] Supabase pull error for ${table}:`, error);
+          syncErrors.push(`Pull error (${table}): ${error.message || JSON.stringify(error)}`);
           hasErrors = true;
           continue;
         }
@@ -64,17 +68,12 @@ export async function syncDatabase(): Promise<void> {
               ON CONFLICT (id) 
               ${table === 'sales' || table === 'cash_register' ? 'DO NOTHING' : `DO UPDATE SET ${setClause}`}
             `;
-            // Note: sales and cash_register don't have typical primary keys if not specified, 
-            // wait, we should assume they all have 'id' or we need custom conflict resolution.
-            // Let's use a dynamic approach based on primary keys. 
-            // In our schema: products(id), customers(id), sales(invoice_id), sale_items(id), cash_register doesn't have an ID?
             
             let primaryKey = 'id';
             if (table === 'sales') primaryKey = 'invoice_id';
             
             let finalSql = '';
             if (table === 'cash_register') {
-               // no PK in cash_register from previous schema, let's just insert if not exists based on timestamp/shift
                finalSql = `
                  INSERT INTO ${table} (${columns.join(', ')})
                  VALUES (${placeholders})
@@ -90,14 +89,17 @@ export async function syncDatabase(): Promise<void> {
             
             try {
                await query(finalSql, values, false);
-            } catch (err) {
-               // Ignore cash_register duplicates if we can't upsert
-               if (table !== 'cash_register') console.error(`[Sync] Local upsert error for ${table}:`, err);
+            } catch (err: any) {
+               if (table !== 'cash_register') {
+                 console.error(`[Sync] Local upsert error for ${table}:`, err);
+                 // We don't necessarily fail the whole sync for one record, but we can log it.
+               }
             }
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(`[Sync] Remote read error for ${table}:`, err);
+        syncErrors.push(`Remote read error (${table}): ${err.message || 'Unknown error'}`);
         hasErrors = true;
       }
     }
@@ -108,7 +110,7 @@ export async function syncDatabase(): Promise<void> {
       console.log('[Sync] Background sync completed successfully.');
     } else {
       console.warn('[Sync] Background sync completed with some errors. Will retry next cycle.');
-      throw new Error("Sync completed with errors");
+      throw new Error(syncErrors.join(" | "));
     }
   } catch (error) {
     console.error('[Sync] Sync process failed:', error);
