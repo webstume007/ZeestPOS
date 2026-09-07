@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { Modal } from "@/components/ui/Modal";
-import { useShift } from "@/hooks/useShift";
-import { CashTransaction, getShiftTransactions, addCashTransaction, getSetting } from "@/lib/db";
-import { MonitorSpeaker, ArrowDownToLine, ArrowUpFromLine, Wallet, LogOut, CheckCircle2 } from "lucide-react";
+import { CashTransaction, getAllCashTransactions, addCashTransaction } from "@/lib/db";
+import { MonitorSpeaker, ArrowDownToLine, ArrowUpFromLine, Wallet, History } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/components/providers/AuthProvider";
 
+type TimeFilter = "1D" | "Yesterday" | "1W" | "1M" | "Manual";
+
 export default function CashRegister() {
-  const { shiftId, cashierId, startShift, endShift } = useShift();
-  
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<CashTransaction[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -18,28 +19,21 @@ export default function CashRegister() {
   const [cashType, setCashType] = useState<"in" | "out">("in");
   const [amount, setAmount] = useState<number>(0);
   const [reason, setReason] = useState("");
-  const [filter, setFilter] = useState("10");
   
-  const [selectedCashier, setSelectedCashier] = useState("");
-  const [cashiers, setCashiers] = useState<string[]>([]);
-
-  useEffect(() => {
-    const loadCashiers = async () => {
-      try {
-        const cashiersJson = await getSetting("cashiers", "[]");
-        setCashiers(JSON.parse(cashiersJson));
-      } catch (e) {
-        console.error("Failed to load cashiers:", e);
-      }
-    };
-    loadCashiers();
-  }, []);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("1D");
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split("T")[0];
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    return new Date().toISOString().split("T")[0];
+  });
 
   const fetchTransactions = async () => {
-    if (!shiftId) return;
     setLoading(true);
     try {
-      const data = await getShiftTransactions(shiftId);
+      const data = await getAllCashTransactions();
       setTransactions(data);
     } catch (error) {
       console.error("Failed to fetch transactions:", error);
@@ -50,28 +44,18 @@ export default function CashRegister() {
 
   useEffect(() => {
     fetchTransactions();
-  }, [shiftId]);
-
-  const handleStartShift = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCashier) return;
-    startShift(selectedCashier);
-  };
-
-  const handleEndShift = () => {
-    if (confirm(`Expected Drawer Balance: Rs ${netBalance.toFixed(0)}\n\nAre you sure you want to end this shift?`)) {
-      endShift();
-    }
-  };
+  }, []);
 
   const handleCashSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!shiftId || !cashierId || amount <= 0) return;
+    if (amount <= 0) return;
+
+    const cashierName = user?.username || "Admin";
 
     try {
       await addCashTransaction(
-        shiftId,
-        cashierId,
+        "no-shift", // Dummy shift id since shift concept is removed
+        cashierName,
         cashType === "in" ? amount : 0,
         cashType === "out" ? amount : 0,
         reason || (cashType === "in" ? "Manual Cash In" : "Manual Cash Out")
@@ -85,145 +69,168 @@ export default function CashRegister() {
     }
   };
 
-  const { user } = useAuth();
+  const filteredTransactions = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
+    const oneWeekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+    const oneMonthAgo = now.getTime() - 30 * 24 * 60 * 60 * 1000;
 
-  useEffect(() => {
-    if (user?.username && (!shiftId || !cashierId)) {
-      startShift(user.username);
-    }
-  }, [user, shiftId, cashierId, startShift]);
+    return transactions.filter(tx => {
+      const txTime = new Date(tx.timestamp).getTime();
+      
+      if (timeFilter === "1D") {
+        return txTime >= todayStart;
+      }
+      if (timeFilter === "Yesterday") {
+        return txTime >= yesterdayStart && txTime < todayStart;
+      }
+      if (timeFilter === "1W") {
+        return txTime >= oneWeekAgo;
+      }
+      if (timeFilter === "1M") {
+        return txTime >= oneMonthAgo;
+      }
+      if (timeFilter === "Manual") {
+        const startTimestamp = startDate ? new Date(startDate + "T00:00:00").getTime() : 0;
+        const endTimestamp = endDate ? new Date(endDate + "T23:59:59").getTime() : Infinity;
+        return txTime >= startTimestamp && txTime <= endTimestamp;
+      }
+      return true;
+    });
+  }, [transactions, timeFilter, startDate, endDate]);
 
-  if (!shiftId || !cashierId) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full p-8 bg-slate-50 dark:bg-slate-950">
-        <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-md w-full text-center">
-          <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-6">
-            <MonitorSpeaker className="w-10 h-10 animate-pulse" />
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Starting Shift...</h1>
-          <p className="text-slate-500 mb-8">Opening register for <span className="font-bold text-slate-700 dark:text-slate-300">{user?.username || "Cashier"}</span>.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const totalIn = transactions.reduce((acc, curr) => acc + Number(curr.cash_in), 0);
-  const totalOut = transactions.reduce((acc, curr) => acc + Number(curr.cash_out), 0);
+  const totalIn = filteredTransactions.reduce((acc, curr) => acc + Number(curr.cash_in), 0);
+  const totalOut = filteredTransactions.reduce((acc, curr) => acc + Number(curr.cash_out), 0);
   const netBalance = totalIn - totalOut;
 
-  const filteredTransactions = transactions.filter(tx => {
-    const txDate = new Date(tx.timestamp);
-    const now = new Date();
-    if (filter === "This Week") {
-      const weekAgo = new Date();
-      weekAgo.setDate(now.getDate() - 7);
-      return txDate >= weekAgo;
-    }
-    if (filter === "This Year") {
-      return txDate.getFullYear() === now.getFullYear();
-    }
-    return true; // All Day, All Time, or numeric limits
-  }).slice(0, filter === "10" ? 10 : (filter === "50" ? 50 : (filter === "100" ? 100 : undefined)));
-
   return (
-    <div className="p-8 max-w-7xl mx-auto h-full flex flex-col">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto h-full flex flex-col">
       
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Cash Register</h1>
-          <p className="text-slate-500 mt-2 flex items-center gap-2">
-            Active Cashier: <span className="font-semibold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-md">{cashierId}</span>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <MonitorSpeaker className="w-6 h-6 text-blue-500 hidden sm:block" />
+            Cash Register
+          </h1>
+          <p className="text-sm md:text-base text-slate-500 mt-1 md:mt-2">
+            Manage your drawer balance and cash flows.
           </p>
         </div>
-        <button
-          onClick={handleEndShift}
-          className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm"
-        >
-          <LogOut className="w-5 h-5" />
-          End Shift
-        </button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-6">
-          <div className="p-4 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-2xl">
-            <ArrowDownToLine className="w-8 h-8" />
+      {/* Summary Cards - Mobile: 2 in one line, drawer balance full width below */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-6">
+        <div className="col-span-1 bg-white dark:bg-slate-900 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-6">
+          <div className="p-2.5 md:p-4 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl md:rounded-2xl shrink-0">
+            <ArrowDownToLine className="w-5 h-5 md:w-8 md:h-8" />
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500 mb-1">Total Cash In</p>
-            <p className="text-3xl font-bold text-slate-900 dark:text-white">Rs {totalIn.toFixed(0)}</p>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-6">
-          <div className="p-4 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl">
-            <ArrowUpFromLine className="w-8 h-8" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500 mb-1">Total Cash Out</p>
-            <p className="text-3xl font-bold text-slate-900 dark:text-white">Rs {totalOut.toFixed(0)}</p>
+          <div className="min-w-0">
+            <p className="text-xs md:text-sm font-medium text-slate-500 mb-0.5 md:mb-1 truncate">Total Cash In</p>
+            <p className="text-lg md:text-3xl font-bold text-slate-900 dark:text-white truncate">Rs {totalIn.toFixed(0)}</p>
           </div>
         </div>
-        <div className="bg-blue-600 dark:bg-blue-600 p-6 rounded-3xl shadow-md flex items-center gap-6 text-white">
-          <div className="p-4 bg-white/20 rounded-2xl">
-            <Wallet className="w-8 h-8" />
+
+        <div className="col-span-1 bg-white dark:bg-slate-900 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-6">
+          <div className="p-2.5 md:p-4 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl md:rounded-2xl shrink-0">
+            <ArrowUpFromLine className="w-5 h-5 md:w-8 md:h-8" />
           </div>
-          <div>
-            <p className="text-sm font-medium text-blue-100 mb-1">Net Drawer Balance</p>
-            <p className="text-3xl font-bold">Rs {netBalance.toFixed(0)}</p>
+          <div className="min-w-0">
+            <p className="text-xs md:text-sm font-medium text-slate-500 mb-0.5 md:mb-1 truncate">Total Cash Out</p>
+            <p className="text-lg md:text-3xl font-bold text-slate-900 dark:text-white truncate">Rs {totalOut.toFixed(0)}</p>
+          </div>
+        </div>
+
+        <div className="col-span-2 md:col-span-1 bg-blue-600 dark:bg-blue-600 p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-md flex items-center gap-4 md:gap-6 text-white">
+          <div className="p-3 md:p-4 bg-white/20 rounded-xl md:rounded-2xl shrink-0">
+            <Wallet className="w-6 h-6 md:w-8 md:h-8" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs md:text-sm font-medium text-blue-100 mb-0.5 md:mb-1 truncate">Net Drawer Balance</p>
+            <p className="text-xl md:text-3xl font-bold truncate">Rs {netBalance.toFixed(0)}</p>
           </div>
         </div>
       </div>
 
-      {/* Action Buttons */}
-      {/* Action Buttons & Filter */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="flex flex-wrap gap-4 w-full sm:w-auto">
+      {/* Action Buttons & Filters */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-6">
+        
+        {/* Actions */}
+        <div className="flex flex-wrap gap-2 w-full xl:w-auto">
           <button
             onClick={() => { setCashType("in"); setIsCashModalOpen(true); }}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 text-slate-700 dark:text-slate-300 px-5 py-3 rounded-xl font-medium transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 md:gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 text-slate-700 dark:text-slate-300 px-3 md:px-5 py-2 md:py-3 rounded-xl font-medium transition-colors text-sm md:text-base"
           >
-            <ArrowDownToLine className="w-5 h-5" />
+            <ArrowDownToLine className="w-4 h-4 md:w-5 md:h-5" />
             <span className="hidden sm:inline">Add Manual Cash In</span>
             <span className="sm:hidden">Cash In</span>
           </button>
           <button
             onClick={() => { setCashType("out"); setIsCashModalOpen(true); }}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 text-slate-700 dark:text-slate-300 px-5 py-3 rounded-xl font-medium transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 md:gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 text-slate-700 dark:text-slate-300 px-3 md:px-5 py-2 md:py-3 rounded-xl font-medium transition-colors text-sm md:text-base"
           >
-            <ArrowUpFromLine className="w-5 h-5" />
+            <ArrowUpFromLine className="w-4 h-4 md:w-5 md:h-5" />
             <span className="hidden sm:inline">Add Cash Out</span>
             <span className="sm:hidden">Cash Out</span>
           </button>
+          
+          <Link
+            href="/sales"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 md:gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 text-slate-700 dark:text-slate-300 px-3 md:px-5 py-2 md:py-3 rounded-xl font-medium transition-colors text-sm md:text-base"
+          >
+            <History className="w-4 h-4 md:w-5 md:h-5" />
+            <span>Sales History</span>
+          </Link>
         </div>
         
-        <div className="w-full sm:w-auto">
-          <select 
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="w-full sm:w-48 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-          >
-            <option value="10">Last 10 Records</option>
-            <option value="50">Last 50 Records</option>
-            <option value="100">Last 100 Records</option>
-            <option value="All Day">All Day</option>
-            <option value="This Week">This Week</option>
-            <option value="This Year">This Year</option>
-            <option value="All Time">All Time</option>
-          </select>
+        {/* Filters */}
+        <div className="w-full xl:w-auto flex flex-col sm:flex-row gap-3">
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full sm:w-auto overflow-x-auto">
+            {(["1D", "Yesterday", "1W", "1M", "Manual"] as TimeFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setTimeFilter(f)}
+                className={`flex-1 sm:flex-none px-4 py-2 text-sm font-semibold rounded-lg transition-colors whitespace-nowrap ${
+                  timeFilter === f 
+                    ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm" 
+                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
+          {timeFilter === "Manual" && (
+            <div className="flex items-center gap-2">
+              <input 
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full sm:w-36 px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-slate-400">to</span>
+              <input 
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full sm:w-36 px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
         </div>
       </div>
 
       {/* Ledger */}
       <div className="md:bg-white md:dark:bg-slate-900 md:border md:border-slate-200 md:dark:border-slate-800 md:rounded-3xl md:shadow-sm flex-1 overflow-hidden flex flex-col">
-        <div className="overflow-x-auto flex-1 p-6">
-          <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+        <div className="overflow-x-auto flex-1 p-2 md:p-6">
+          <table className="w-full text-left text-xs md:text-sm text-slate-600 dark:text-slate-300">
             <thead className="text-slate-500 font-medium pb-4 border-b border-slate-100 dark:border-slate-800">
               <tr>
-                <th className="pb-4 pr-6">Time</th>
-                <th className="pb-4 px-6">Reason</th>
-                <th className="pb-4 px-6 text-right">Cash In</th>
-                <th className="pb-4 pl-6 text-right">Cash Out</th>
+                <th className="pb-4 pr-2 md:pr-6 whitespace-nowrap">Time / User</th>
+                <th className="pb-4 px-2 md:px-6">Reason</th>
+                <th className="pb-4 px-2 md:px-6 text-right whitespace-nowrap">Cash In</th>
+                <th className="pb-4 pl-2 md:pl-6 text-right whitespace-nowrap">Cash Out</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
@@ -233,17 +240,20 @@ export default function CashRegister() {
                 </tr>
               ) : filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-slate-500">No transactions recorded in this shift yet.</td>
+                  <td colSpan={4} className="py-8 text-center text-slate-500">No transactions found for the selected period.</td>
                 </tr>
               ) : (
                 filteredTransactions.map((tx, idx) => (
                   <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                    <td className="py-4 pr-2 sm:pr-6 font-mono text-xs text-slate-500">{format(new Date(tx.timestamp), "hh:mm a")}</td>
-                    <td className="py-4 px-2 sm:px-6 text-slate-900 dark:text-slate-100 font-medium">{tx.reason}</td>
-                    <td className="py-4 px-2 sm:px-6 text-right font-semibold text-emerald-600 dark:text-emerald-400">
+                    <td className="py-3 md:py-4 pr-2 md:pr-6 whitespace-nowrap">
+                      <div className="font-mono text-[10px] md:text-xs text-slate-500">{format(new Date(tx.timestamp), "dd MMM, hh:mm a")}</div>
+                      <div className="text-[10px] md:text-xs font-semibold text-blue-600/80">{tx.cashier_id}</div>
+                    </td>
+                    <td className="py-3 md:py-4 px-2 md:px-6 text-slate-900 dark:text-slate-100 font-medium text-xs md:text-sm">{tx.reason}</td>
+                    <td className="py-3 md:py-4 px-2 md:px-6 text-right font-semibold text-emerald-600 dark:text-emerald-400">
                       {Number(tx.cash_in) > 0 ? `Rs ${Number(tx.cash_in).toFixed(0)}` : "-"}
                     </td>
-                    <td className="py-4 pl-2 sm:pl-6 text-right font-semibold text-amber-600 dark:text-amber-400">
+                    <td className="py-3 md:py-4 pl-2 md:pl-6 text-right font-semibold text-amber-600 dark:text-amber-400">
                       {Number(tx.cash_out) > 0 ? `Rs ${Number(tx.cash_out).toFixed(0)}` : "-"}
                     </td>
                   </tr>
@@ -255,49 +265,39 @@ export default function CashRegister() {
       </div>
 
       <Modal isOpen={isCashModalOpen} onClose={() => setIsCashModalOpen(false)} title={`Manual Cash ${cashType === "in" ? "In" : "Out"}`}>
-        <form onSubmit={handleCashSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Amount (Rs)</label>
+        <form onSubmit={handleCashSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Amount (Rs) *</label>
             <input
               type="number"
-              required
-              min="1"
               value={amount || ""}
               onChange={(e) => setAmount(Number(e.target.value))}
-              className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-2xl font-bold"
-              placeholder="0"
+              required
+              min="1"
+              autoFocus
+              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-xl font-bold"
             />
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Reason</label>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Reason (Optional)</label>
             <input
               type="text"
-              required
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder={cashType === "in" ? "e.g., Morning Float" : "e.g., Paid supplier"}
+              placeholder="e.g. Paid for supplies"
+              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
-          <div className="flex justify-end gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={() => setIsCashModalOpen(false)}
-              className="px-6 py-2.5 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={amount <= 0}
-              className={`px-6 py-2.5 rounded-xl font-bold text-white transition-colors flex items-center gap-2 ${
-                cashType === "in" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"
-              }`}
-            >
-              {cashType === "in" ? <ArrowDownToLine className="w-5 h-5" /> : <ArrowUpFromLine className="w-5 h-5" />}
-              {cashType === "in" ? "Add Cash In" : "Add Cash Out"}
-            </button>
-          </div>
+          <button
+            type="submit"
+            className={`w-full py-3 rounded-xl text-white font-bold transition-all shadow-md active:scale-95 ${
+              cashType === "in" 
+                ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/25" 
+                : "bg-amber-600 hover:bg-amber-700 shadow-amber-500/25"
+            }`}
+          >
+            Confirm Cash {cashType === "in" ? "In" : "Out"}
+          </button>
         </form>
       </Modal>
     </div>

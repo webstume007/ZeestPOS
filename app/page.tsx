@@ -6,9 +6,10 @@ import { ShoppingCart, Package, History, Users, MonitorSpeaker, Settings, UserCi
 import { useShift } from "@/hooks/useShift";
 import { getDashboardStats, DashboardStats } from "@/lib/db";
 import { Logo } from "@/components/ui/Logo";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export default function Dashboard() {
-  const { cashierId } = useShift();
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
 
   useEffect(() => {
@@ -34,16 +35,34 @@ export default function Dashboard() {
 
   return (
     <div className="p-3 md:p-6 max-w-7xl mx-auto h-full flex flex-col">
-      <div className="mb-6 md:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mt-2">
+      <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mt-2">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">Main Dashboard</h1>
           <p className="text-sm md:text-base text-slate-500 mt-1 md:mt-2">Welcome to BajwaStore. Select an action below.</p>
         </div>
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 md:py-2 rounded-xl border border-slate-200 dark:border-slate-700 self-start sm:self-auto w-full sm:w-auto">
-          <UserCircle className="w-5 h-5 text-slate-500 shrink-0" />
-          <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Desk:</span>
-          <span className="text-sm font-bold text-blue-600 dark:text-blue-400 truncate">{cashierId || "No Shift Active"}</span>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          {/* Beautiful Logged in As UI */}
+          <div className="flex items-center gap-2.5 bg-white dark:bg-slate-900 px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+              {user?.username?.charAt(0).toUpperCase() || <UserCircle className="w-5 h-5" />}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Logged In As</span>
+              <span className="text-sm font-bold text-slate-900 dark:text-white leading-none">
+                {user?.username || "Admin"}
+              </span>
+            </div>
+          </div>
+          
+          <Link href="/sales" className="flex items-center justify-center gap-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800/50 px-4 py-2.5 rounded-2xl font-semibold transition-colors shadow-sm">
+            <History className="w-5 h-5" />
+            <span className="sm:inline">Sales History</span>
+          </Link>
         </div>
+      </div>
+
+      <div className="md:hidden flex justify-center pb-6 pt-2 opacity-80">
+        <Logo className="w-28 h-auto" />
       </div>
 
       {/* Statistics Cards */}
@@ -105,10 +124,6 @@ export default function Dashboard() {
             </Link>
           );
         })}
-      </div>
-      
-      <div className="md:hidden flex justify-center pb-8 pt-4 opacity-70">
-        <Logo className="w-32 h-auto" />
       </div>
     </div>
   );

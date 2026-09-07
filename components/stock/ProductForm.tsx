@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Product, createProduct, updateProduct, getSetting, getVendors, createVendor, Vendor } from "@/lib/db";
-import { Plus } from "lucide-react";
+import { Plus, Search, Check, ChevronDown, UserPlus, X, Store } from "lucide-react";
 
 interface ProductFormProps {
   initialData?: Partial<Product> & { id?: string };
@@ -28,13 +28,20 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
 
   const [categories, setCategories] = useState<string[]>(["General"]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [showNewVendor, setShowNewVendor] = useState(false);
+  
+  // Vendor combobox state
+  const [vendorSearch, setVendorSearch] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isAddingNewVendor, setIsAddingNewVendor] = useState(false);
+  const [savingVendor, setSavingVendor] = useState(false);
   const [newVendorData, setNewVendorData] = useState({
     name: "",
     representative_name: "",
     contact: "",
     address: ""
   });
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,12 +52,59 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
 
         const vends = await getVendors();
         setVendors(vends);
+
+        if (initialData?.vendor_id) {
+          const matched = vends.find((v) => v.id === initialData.vendor_id);
+          if (matched) {
+            setVendorSearch(matched.name);
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch initial data:", err);
       }
     };
     fetchData();
-  }, []);
+  }, [initialData?.vendor_id]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+        if (!formData.vendor_id) {
+          setVendorSearch("");
+        } else {
+          const selected = vendors.find(v => v.id === formData.vendor_id);
+          if (selected) setVendorSearch(selected.name);
+        }
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [formData.vendor_id, vendors]);
+
+  const handleCreateNewVendor = async () => {
+    if (!newVendorData.name.trim()) return;
+    setSavingVendor(true);
+    try {
+      const created = await createVendor(newVendorData);
+      setVendors(prev => [...prev, created]);
+      setFormData(prev => ({ ...prev, vendor_id: created.id }));
+      setVendorSearch(created.name);
+      setIsAddingNewVendor(false);
+      setIsDropdownOpen(false);
+      setNewVendorData({ name: "", representative_name: "", contact: "", address: "" });
+    } catch (err) {
+      console.error("Failed to create vendor", err);
+      alert("Failed to create vendor");
+    } finally {
+      setSavingVendor(false);
+    }
+  };
+
+  const filteredVendors = vendors.filter(v => 
+    v.name.toLowerCase().includes(vendorSearch.toLowerCase()) || 
+    (v.representative_name && v.representative_name.toLowerCase().includes(vendorSearch.toLowerCase()))
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +113,7 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
     try {
       let finalVendorId = formData.vendor_id;
 
-      if (showNewVendor && newVendorData.name.trim()) {
+      if (isAddingNewVendor && newVendorData.name.trim()) {
         const newVendor = await createVendor(newVendorData);
         finalVendorId = newVendor.id;
       }
@@ -89,11 +143,6 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
       ...prev,
       [name]: type === "number" ? parseFloat(value) || 0 : value,
     }));
-  };
-
-  const handleNewVendorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewVendorData((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -155,57 +204,158 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
           </select>
         </div>
         
-        <div className="space-y-2">
+        <div className="space-y-2" ref={dropdownRef}>
           <div className="flex justify-between items-center">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Vendor (Optional)</label>
-            <button 
-              type="button" 
-              onClick={() => setShowNewVendor(!showNewVendor)}
-              className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 font-medium"
-            >
-              <Plus className="w-3 h-3" /> {showNewVendor ? "Cancel New Vendor" : "New Vendor"}
-            </button>
+            {!isAddingNewVendor && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingNewVendor(true);
+                  setIsDropdownOpen(false);
+                }}
+                className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" /> + Add New Vendor
+              </button>
+            )}
           </div>
-          
-          {!showNewVendor ? (
-            <select
-              name="vendor_id"
-              value={formData.vendor_id}
-              onChange={handleChange}
-              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-            >
-              <option value="">Select a vendor...</option>
-              {vendors.map((v) => (
-                <option key={v.id} value={v.id}>{v.name}</option>
-              ))}
-            </select>
+
+          {isAddingNewVendor ? (
+            <div className="p-4 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 rounded-xl space-y-3">
+              <div className="flex items-center justify-between pb-1">
+                <span className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <UserPlus className="w-3.5 h-3.5" /> Quick Add Vendor
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingNewVendor(false)}
+                  className="text-slate-400 hover:text-slate-600 p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <input
+                  type="text"
+                  placeholder="Vendor / Company Name *"
+                  value={newVendorData.name}
+                  onChange={(e) => setNewVendorData((p) => ({ ...p, name: e.target.value }))}
+                  required
+                  className="p-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                />
+                <input
+                  type="text"
+                  placeholder="Contact / Phone"
+                  value={newVendorData.contact}
+                  onChange={(e) => setNewVendorData((p) => ({ ...p, contact: e.target.value }))}
+                  className="p-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                />
+                <input
+                  type="text"
+                  placeholder="Representative / Agent Name"
+                  value={newVendorData.representative_name}
+                  onChange={(e) => setNewVendorData((p) => ({ ...p, representative_name: e.target.value }))}
+                  className="p-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                />
+                <input
+                  type="text"
+                  placeholder="City / Address"
+                  value={newVendorData.address}
+                  onChange={(e) => setNewVendorData((p) => ({ ...p, address: e.target.value }))}
+                  className="p-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsAddingNewVendor(false)}
+                  className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateNewVendor}
+                  disabled={savingVendor || !newVendorData.name.trim()}
+                  className="px-4 py-1.5 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 rounded-lg disabled:opacity-50"
+                >
+                  {savingVendor ? "Saving..." : "Save & Select"}
+                </button>
+              </div>
+            </div>
           ) : (
-            <div className="space-y-3 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl">
-              <input
-                type="text"
-                name="name"
-                value={newVendorData.name}
-                onChange={handleNewVendorChange}
-                placeholder="Vendor Name *"
-                required
-                className="w-full p-2 text-sm rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              />
-              <input
-                type="text"
-                name="representative_name"
-                value={newVendorData.representative_name}
-                onChange={handleNewVendorChange}
-                placeholder="Representative Name"
-                className="w-full p-2 text-sm rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              />
-              <input
-                type="text"
-                name="contact"
-                value={newVendorData.contact}
-                onChange={handleNewVendorChange}
-                placeholder="Contact Number"
-                className="w-full p-2 text-sm rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              />
+            <div className="relative">
+              <div
+                onClick={() => setIsDropdownOpen(true)}
+                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer focus-within:ring-2 focus-within:ring-blue-500"
+              >
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <Store className="w-4 h-4 text-slate-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={vendorSearch}
+                    onChange={(e) => {
+                      setVendorSearch(e.target.value);
+                      setIsDropdownOpen(true);
+                      if (e.target.value === "") {
+                        setFormData((p) => ({ ...p, vendor_id: "" }));
+                      }
+                    }}
+                    placeholder="Search vendor..."
+                    className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder-slate-400 text-slate-900 dark:text-white"
+                  />
+                </div>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+              </div>
+
+              {isDropdownOpen && (
+                <div className="absolute z-10 w-full mt-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="max-h-60 overflow-y-auto p-1">
+                    {filteredVendors.length === 0 ? (
+                      <div className="p-3 text-center text-sm text-slate-500">
+                        No vendors found matching "{vendorSearch}"
+                      </div>
+                    ) : (
+                      filteredVendors.map((vendor) => (
+                        <div
+                          key={vendor.id}
+                          onClick={() => {
+                            setFormData((p) => ({ ...p, vendor_id: vendor.id }));
+                            setVendorSearch(vendor.name);
+                            setIsDropdownOpen(false);
+                          }}
+                          className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-colors ${
+                            formData.vendor_id === vendor.id
+                              ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                              : "hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-sm">{vendor.name}</span>
+                            {vendor.representative_name && (
+                              <span className="text-xs text-slate-500">{vendor.representative_name}</span>
+                            )}
+                          </div>
+                          {formData.vendor_id === vendor.id && <Check className="w-4 h-4" />}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="p-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingNewVendor(true);
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full py-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" /> Add New Vendor
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

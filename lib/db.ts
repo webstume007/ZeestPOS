@@ -630,6 +630,10 @@ export async function addCashTransaction(
     `, [shiftId, cashierId, cashIn, cashOut, reason]);
 }
 
+export async function getAllCashTransactions(): Promise<CashTransaction[]> {
+    return query(`SELECT * FROM cash_register ORDER BY timestamp DESC`);
+}
+
 // Settings CRUD
 export async function getSetting(key: string, defaultValue: string = ""): Promise<string> {
     const sql = `SELECT value FROM settings WHERE key = $1`;
@@ -654,4 +658,82 @@ export async function getSales(): Promise<Sale[]> {
         ORDER BY s.timestamp DESC
     `;
     return await query<Sale>(sql);
+}
+
+export async function getSaleItems(invoiceId: string): Promise<{
+    item: SaleItem,
+    product: Product
+}[]> {
+    const sql = `
+        SELECT si.*, p.name_en, p.name_ur, p.category, p.retail_price, p.wholesale_shopkeeper_price 
+        FROM sale_items si
+        JOIN products p ON si.product_id = p.id
+        WHERE si.invoice_id = $1
+    `;
+    const rows = await query(sql, [invoiceId]);
+    return rows.map(r => ({
+        item: {
+            id: r.id,
+            invoice_id: r.invoice_id,
+            product_id: r.product_id,
+            quantity: r.quantity,
+            price_applied: r.price_applied
+        } as SaleItem,
+        product: {
+            id: r.product_id,
+            name_en: r.name_en,
+            name_ur: r.name_ur,
+            category: r.category,
+            retail_price: r.retail_price,
+            wholesale_shopkeeper_price: r.wholesale_shopkeeper_price
+        } as Product
+    }));
+}
+
+export async function processSaleReturn(
+    originalSale: Sale,
+    returnedItems: { product_id: string, return_quantity: number, price_applied: number }[],
+    cashierName: string
+): Promise<void> {
+    // Note: A full implementation would compare old vs new state and issue partial refunds.
+    // This simple version restocks items and issues a cash out/khata reduction.
+
+    let totalRefundAmount = 0;
+    for (const item of returnedItems) {
+        if (item.return_quantity <= 0) continue;
+        totalRefundAmount += item.return_quantity * item.price_applied;
+        
+        // Update product stock (add back)
+        await query(`UPDATE products SET current_stock = current_stock + $1 WHERE id = $2`, [item.return_quantity, item.product_id]);
+        
+        // Delete or update sale_items logic omitted for simplicity in this reverse process,
+        // but we assume the user just wants the stock back and money accounted for.
+        // We will update the sale record to reflect a note or adjust its total.
+        await query(`UPDATE sale_items SET quantity = quantity - $1 WHERE invoice_id = $2 AND product_id = $3`, [item.return_quantity, originalSale.invoice_id, item.product_id]);
+    }
+
+    if (totalRefundAmount > 0) {
+        // Adjust Sale record
+        await query(`UPDATE sales SET total_amount = total_amount - $1, amount_paid = amount_paid - $1 WHERE invoice_id = $2`, [totalRefundAmount, originalSale.invoice_id]);
+
+        // If it was Khata, adjust Khata. Else adjust cash register.
+        if (originalSale.payment_status === "khata" && originalSale.customer_id) {
+            await query(`
+                UPDATE customers 
+                SET total_credit_balance = total_credit_balance - $1 
+                WHERE id = $2
+            `, [totalRefundAmount, originalSale.customer_id]);
+            
+            await query(`
+                INSERT INTO customer_transactions (id, customer_id, type, amount, balance_after, description, created_by, timestamp)
+                VALUES (gen_random_uuid(), $1, 'payment', $2, 0, $3, $4, NOW())
+            `, [originalSale.customer_id, totalRefundAmount, `Return/Refund for Invoice ${originalSale.invoice_number}`, cashierName]);
+        } else {
+            // Cash return
+            await query(`
+                INSERT INTO cash_register (shift_id, cashier_id, cash_in, cash_out, reason)
+                VALUES ('no-shift', $1, 0, $2, $3)
+            `, [cashierName, totalRefundAmount, `Return/Refund for Invoice ${originalSale.invoice_number}`]);
+        }
+    }
 }

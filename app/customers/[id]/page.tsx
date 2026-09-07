@@ -5,7 +5,7 @@ import { Customer, Sale, CustomerTransaction, getCustomer, getCustomerSales, get
 import { Modal } from "@/components/ui/Modal";
 import { User, Receipt, History, Wallet, ArrowDownRight, ArrowUpRight, BookOpen, ShieldCheck, Clock } from "lucide-react";
 import { format } from "date-fns";
-import { useShift } from "@/hooks/useShift";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export default function CustomerProfile({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -27,7 +27,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
   const [giveNote, setGiveNote] = useState<string>("");
   const [processingGive, setProcessingGive] = useState(false);
 
-  const { shiftId, cashierId } = useShift();
+  const { user } = useAuth();
 
   const fetchCustomerData = async () => {
     try {
@@ -52,8 +52,8 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
     e.preventDefault();
     if (!customer || paymentAmount <= 0) return;
     
-    const loggedInUser = localStorage.getItem("cashierName") || localStorage.getItem("active_cashier_id") || cashierId || "Admin";
-    const activeShift = shiftId || `shift_${loggedInUser}_${new Date().toISOString().split('T')[0]}`;
+    const loggedInUser = user?.username || "Admin";
+    const activeShift = "no-shift";
     
     setProcessingPayment(true);
     try {
@@ -80,8 +80,8 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
     e.preventDefault();
     if (!customer || giveAmount <= 0) return;
     
-    const loggedInUser = localStorage.getItem("cashierName") || localStorage.getItem("active_cashier_id") || cashierId || "Admin";
-    const activeShift = shiftId || `shift_${loggedInUser}_${new Date().toISOString().split('T')[0]}`;
+    const loggedInUser = user?.username || "Admin";
+    const activeShift = "no-shift";
     
     setProcessingGive(true);
     try {

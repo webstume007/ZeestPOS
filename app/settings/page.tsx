@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Settings as SettingsIcon, User as UserIcon, Shield, Laptop } from "lucide-react";
+import { Settings as SettingsIcon, User as UserIcon, Shield, Laptop, Sun, Moon, Monitor } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -69,33 +69,33 @@ export default function Settings() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <button 
                 onClick={() => setTheme("light")} 
-                className={`p-4 rounded-2xl border-2 transition-all font-semibold text-sm ${
+                className={`p-4 rounded-2xl border-2 transition-all font-semibold text-sm flex items-center justify-center gap-2 ${
                   theme === 'light' 
                     ? 'border-blue-600 bg-blue-50/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 shadow-sm' 
                     : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                 }`}
               >
-                ☀️ Light Mode
+                <Sun className="w-4 h-4" /> Light Mode
               </button>
               <button 
                 onClick={() => setTheme("dark")} 
-                className={`p-4 rounded-2xl border-2 transition-all font-semibold text-sm ${
+                className={`p-4 rounded-2xl border-2 transition-all font-semibold text-sm flex items-center justify-center gap-2 ${
                   theme === 'dark' 
                     ? 'border-blue-600 bg-blue-50/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 shadow-sm' 
                     : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                 }`}
               >
-                🌙 Dark Mode
+                <Moon className="w-4 h-4" /> Dark Mode
               </button>
               <button 
                 onClick={() => setTheme("system")} 
-                className={`p-4 rounded-2xl border-2 transition-all font-semibold text-sm ${
+                className={`p-4 rounded-2xl border-2 transition-all font-semibold text-sm flex items-center justify-center gap-2 ${
                   theme === 'system' 
                     ? 'border-blue-600 bg-blue-50/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 shadow-sm' 
                     : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                 }`}
               >
-                💻 System Default
+                <Monitor className="w-4 h-4" /> System Default
               </button>
             </div>
           )}
