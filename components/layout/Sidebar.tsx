@@ -4,13 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Package, History, Users, MonitorSpeaker, Settings, Cloud, CloudOff, RefreshCw, DownloadCloud, Truck } from 'lucide-react';
-import { useSync } from '@/hooks/useSync';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Logo } from '@/components/ui/Logo';
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { status, triggerManualSync } = useSync();
   const { user, logout } = useAuth();
   
   const [updateStatus, setUpdateStatus] = useState<"idle" | "available" | "downloaded">("idle");
@@ -103,39 +101,6 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Sync Status Indicator */}
-      <div className="p-4 mx-4 mb-4 border-t border-slate-200 dark:border-slate-800">
-        <button 
-          onClick={() => status !== "syncing" && triggerManualSync()}
-          disabled={status === "syncing" || status === "offline"}
-          className="flex items-center gap-3 px-2 py-2 rounded-xl text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 w-full text-left"
-        >
-          {status === "syncing" && (
-            <>
-              <RefreshCw className="w-5 h-5 text-blue-500 animate-spin" />
-              <span className="text-blue-500">Syncing...</span>
-            </>
-          )}
-          {status === "idle" && (
-            <>
-              <Cloud className="w-5 h-5 text-emerald-500" />
-              <span className="text-emerald-500">Cloud Synced</span>
-            </>
-          )}
-          {status === "offline" && (
-            <>
-              <CloudOff className="w-5 h-5 text-red-500" />
-              <span className="text-red-500">Offline</span>
-            </>
-          )}
-          {status === "error" && (
-            <>
-              <CloudOff className="w-5 h-5 text-amber-500" />
-              <span className="text-amber-500">Sync Error</span>
-            </>
-          )}
-        </button>
-      </div>
     </aside>
   );
 }

@@ -175,7 +175,7 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Category</label>
           <select
@@ -203,23 +203,10 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
             ))}
           </select>
         </div>
-        
-        <div className="space-y-2" ref={dropdownRef}>
-          <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Vendor (Optional)</label>
-            {!isAddingNewVendor && (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAddingNewVendor(true);
-                  setIsDropdownOpen(false);
-                }}
-                className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" /> + Add New Vendor
-              </button>
-            )}
-          </div>
+      </div>
+      
+      <div className="space-y-2" ref={dropdownRef}>
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Vendor (Optional)</label>
 
           {isAddingNewVendor ? (
             <div className="p-4 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 rounded-xl space-y-3">
@@ -359,7 +346,6 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
             </div>
           )}
         </div>
-      </div>
 
       {!initialData && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">

@@ -165,18 +165,6 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Vendor <span className="text-red-500">*</span>
             </label>
-            {!isAddingNewVendor && (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAddingNewVendor(true);
-                  setIsDropdownOpen(false);
-                }}
-                className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" /> + Add New Vendor
-              </button>
-            )}
           </div>
 
           {isAddingNewVendor ? (
