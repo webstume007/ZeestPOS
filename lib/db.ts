@@ -341,7 +341,7 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
               EXECUTE FUNCTION trigger_set_updated_at();
             `);
           } catch (e) {
-            console.error(\`Failed to create trigger for \${table}\`, e);
+            console.error(`Failed to create trigger for ${table}`, e);
           }
         }
 
