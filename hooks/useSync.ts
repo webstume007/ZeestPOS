@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { syncDatabase } from "@/lib/syncService";
 
 export type SyncInterval = "realtime" | "hourly" | "daily" | "weekly" | "manual";
@@ -11,6 +11,7 @@ export function useSync() {
   const [error, setError] = useState<string | null>(null);
   const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(null);
   const [syncIntervalPref, setSyncIntervalPref] = useState<SyncInterval>("realtime");
+  const isSyncingRef = useRef(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -21,11 +22,15 @@ export function useSync() {
   }, []);
 
   const runSync = async () => {
+    // Prevent concurrent syncs at the hook level
+    if (isSyncingRef.current) return;
+    
     if (!navigator.onLine) {
       setStatus("offline");
       return;
     }
     
+    isSyncingRef.current = true;
     setStatus("syncing");
     setError(null);
     try {
@@ -39,6 +44,8 @@ export function useSync() {
       console.error(err);
       setError(err.message || "Unknown error occurred during sync.");
       setStatus("error");
+    } finally {
+      isSyncingRef.current = false;
     }
   };
 
@@ -52,7 +59,7 @@ export function useSync() {
   }, []);
 
   useEffect(() => {
-    // We only run initial sync on mount if not manual
+    // Run initial sync on mount if not manual
     if (syncIntervalPref !== "manual") {
       runSync();
     }
@@ -67,9 +74,10 @@ export function useSync() {
     const handleDbMutation = () => {
       if (syncIntervalPref === "realtime") {
         if (syncTimeout) clearTimeout(syncTimeout);
+        // Debounce by 2s (was 500ms — too aggressive, caused excessive API calls)
         syncTimeout = setTimeout(() => {
           runSync();
-        }, 500); // Debounce sync by 500ms
+        }, 2000);
       }
     };
 
@@ -81,8 +89,8 @@ export function useSync() {
     if (syncIntervalPref === "hourly") intervalTime = 3600000;
     else if (syncIntervalPref === "daily") intervalTime = 86400000;
     else if (syncIntervalPref === "weekly") intervalTime = 604800000;
-    // For realtime we can still do a periodic check every 1h just in case
-    else if (syncIntervalPref === "realtime") intervalTime = 3600000;
+    // For realtime, do a periodic background check every 2 minutes
+    else if (syncIntervalPref === "realtime") intervalTime = 120000;
 
     let interval: any = null;
     if (intervalTime > 0) {

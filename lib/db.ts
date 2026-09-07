@@ -156,9 +156,13 @@ declare global {
 
 let browserDb: any = null;
 
+// Global flag to suppress db-mutation events during sync pulls (prevents infinite loops)
+let _suppressSyncEvents = false;
+export function setSyncEventsSuppressed(val: boolean) { _suppressSyncEvents = val; }
+
 // Generic query wrapper
 export async function query<T = any>(sql: string, params: any[] = [], triggerSyncEvent: boolean = true): Promise<T[]> {
-  const isMutation = triggerSyncEvent && /^(INSERT|UPDATE|DELETE)/i.test(sql.trim());
+  const isMutation = triggerSyncEvent && !_suppressSyncEvents && /^(INSERT|UPDATE|DELETE)/i.test(sql.trim());
 
   // 1. Desktop Mode (Electron IPC)
   if (typeof window !== 'undefined' && window.electronAPI) {
@@ -181,84 +185,8 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
       }
       
       // Initialize schema for web fallback
-      await browserDb.exec(`
-        CREATE TABLE IF NOT EXISTS products (
-          id UUID PRIMARY KEY,
-          name_en TEXT,
-          name_ur TEXT,
-          category TEXT,
-          buy_price NUMERIC,
-          buy_time TIMESTAMP,
-          current_stock INTEGER,
-          retail_price NUMERIC,
-          wholesale_shopkeeper_price NUMERIC,
-          is_deleted BOOLEAN DEFAULT FALSE,
-          vendor_id UUID,
-          updated_at TIMESTAMP DEFAULT NOW()
-        );
-        CREATE TABLE IF NOT EXISTS vendors (
-          id UUID PRIMARY KEY,
-          name TEXT,
-          representative_name TEXT,
-          contact TEXT,
-          address TEXT,
-          updated_at TIMESTAMP DEFAULT NOW()
-        );
-        CREATE TABLE IF NOT EXISTS customers (
-          id UUID PRIMARY KEY,
-          full_name TEXT,
-          whatsapp_number TEXT,
-          address TEXT,
-          customer_type TEXT DEFAULT 'Regular',
-          total_credit_balance NUMERIC DEFAULT 0,
-          updated_at TIMESTAMP DEFAULT NOW()
-        );
-        CREATE TABLE IF NOT EXISTS sales (
-          invoice_id UUID PRIMARY KEY,
-          customer_id UUID REFERENCES customers(id),
-          cashier_id TEXT,
-          total_amount NUMERIC,
-          amount_paid NUMERIC,
-          payment_status TEXT,
-          customer_name TEXT,
-          discount_amount NUMERIC DEFAULT 0,
-          invoice_number TEXT,
-          timestamp TIMESTAMP DEFAULT NOW(),
-          updated_at TIMESTAMP DEFAULT NOW()
-        );
-        CREATE TABLE IF NOT EXISTS sale_items (
-          id UUID PRIMARY KEY,
-          invoice_id UUID REFERENCES sales(invoice_id),
-          product_id UUID REFERENCES products(id),
-          quantity INTEGER,
-          price_applied NUMERIC,
-          updated_at TIMESTAMP DEFAULT NOW()
-        );
-        CREATE TABLE IF NOT EXISTS cash_register (
-          shift_id TEXT,
-          cashier_id TEXT,
-          cash_in NUMERIC DEFAULT 0,
-          cash_out NUMERIC DEFAULT 0,
-          timestamp TIMESTAMP DEFAULT NOW(),
-          reason TEXT,
-          updated_at TIMESTAMP DEFAULT NOW()
-        );
-        CREATE TABLE IF NOT EXISTS settings (
-          key TEXT PRIMARY KEY,
-          value TEXT,
-          updated_at TIMESTAMP DEFAULT NOW()
-        );
-        CREATE TABLE IF NOT EXISTS users (
-          id UUID PRIMARY KEY,
-          username TEXT,
-          cnic TEXT UNIQUE,
-          pin TEXT DEFAULT '0000',
-          role TEXT DEFAULT 'Cashier',
-          updated_at TIMESTAMP DEFAULT NOW()
-        );
-      `);
-      
-      // Add newly added column to web fallback dynamically just in case
+      // NOTE: No REFERENCES constraints — local DB is a cache, Supabase enforces FK integrity.
+      // This prevents pull failures when child records arrive before parent records.
       try {
         await browserDb.exec(`
           CREATE TABLE IF NOT EXISTS vendors (
@@ -269,52 +197,122 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
             address TEXT,
             updated_at TIMESTAMP DEFAULT NOW()
           );
-        `);
-        await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS vendor_id UUID;`);
-        await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_customer_price NUMERIC;`);
-        await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name TEXT;`);
-        await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_amount NUMERIC DEFAULT 0;`);
-        await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_number TEXT;`);
-        await browserDb.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type TEXT DEFAULT 'Regular';`);
-        await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
-        await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS unit TEXT;`);
-        await browserDb.exec(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMP DEFAULT NOW());`);
-        await browserDb.exec(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, username TEXT, cnic TEXT UNIQUE, pin TEXT DEFAULT '0000', role TEXT DEFAULT 'Cashier', updated_at TIMESTAMP DEFAULT NOW());`);
-        await browserDb.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin TEXT DEFAULT '0000';`);
-        await browserDb.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'Cashier';`);
-        await browserDb.exec(`UPDATE users SET pin = '0000' WHERE pin IS NULL;`);
-        
-        await browserDb.exec(`
+          CREATE TABLE IF NOT EXISTS products (
+            id UUID PRIMARY KEY,
+            name_en TEXT,
+            name_ur TEXT,
+            category TEXT,
+            buy_price NUMERIC,
+            buy_time TIMESTAMP,
+            current_stock INTEGER,
+            retail_price NUMERIC,
+            wholesale_shopkeeper_price NUMERIC,
+            wholesale_customer_price NUMERIC,
+            is_deleted BOOLEAN DEFAULT FALSE,
+            vendor_id UUID,
+            unit TEXT,
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS customers (
+            id UUID PRIMARY KEY,
+            full_name TEXT,
+            whatsapp_number TEXT,
+            address TEXT,
+            customer_type TEXT DEFAULT 'Regular',
+            total_credit_balance NUMERIC DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS sales (
+            invoice_id UUID PRIMARY KEY,
+            customer_id UUID,
+            cashier_id TEXT,
+            total_amount NUMERIC,
+            amount_paid NUMERIC,
+            payment_status TEXT,
+            customer_name TEXT,
+            discount_amount NUMERIC DEFAULT 0,
+            invoice_number TEXT,
+            timestamp TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS sale_items (
+            id UUID PRIMARY KEY,
+            invoice_id UUID,
+            product_id UUID,
+            quantity INTEGER,
+            price_applied NUMERIC,
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS cash_register (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            shift_id TEXT,
+            cashier_id TEXT,
+            cash_in NUMERIC DEFAULT 0,
+            cash_out NUMERIC DEFAULT 0,
+            timestamp TIMESTAMP DEFAULT NOW(),
+            reason TEXT,
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT,
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS users (
+            id UUID PRIMARY KEY,
+            username TEXT,
+            cnic TEXT UNIQUE,
+            pin TEXT DEFAULT '0000',
+            role TEXT DEFAULT 'Cashier',
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
           CREATE TABLE IF NOT EXISTS stock_logs (
             id UUID PRIMARY KEY,
-            product_id UUID REFERENCES products(id),
-            vendor_id UUID REFERENCES vendors(id),
+            product_id UUID,
+            vendor_id UUID,
             quantity_added INTEGER,
             buy_price NUMERIC,
-            timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+            timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+            updated_at TIMESTAMP DEFAULT NOW()
           );
           CREATE TABLE IF NOT EXISTS customer_transactions (
             id UUID PRIMARY KEY,
-            customer_id UUID REFERENCES customers(id),
+            customer_id UUID,
             type TEXT,
             amount NUMERIC,
             balance_after NUMERIC,
             description TEXT,
             created_by TEXT,
-            timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+            timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+            updated_at TIMESTAMP DEFAULT NOW()
           );
         `);
         
-        await browserDb.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE stock_logs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE cash_register ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-        await browserDb.exec(`ALTER TABLE customer_transactions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+        // Dynamic column additions for older databases that might be missing newer columns
+        const safeAlter = async (sql: string) => {
+          try { await browserDb.exec(sql); } catch (_e) { /* column may already exist */ }
+        };
+        await safeAlter(`ALTER TABLE products ADD COLUMN IF NOT EXISTS vendor_id UUID;`);
+        await safeAlter(`ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_customer_price NUMERIC;`);
+        await safeAlter(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
+        await safeAlter(`ALTER TABLE products ADD COLUMN IF NOT EXISTS unit TEXT;`);
+        await safeAlter(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name TEXT;`);
+        await safeAlter(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_amount NUMERIC DEFAULT 0;`);
+        await safeAlter(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_number TEXT;`);
+        await safeAlter(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type TEXT DEFAULT 'Regular';`);
+        await safeAlter(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin TEXT DEFAULT '0000';`);
+        await safeAlter(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'Cashier';`);
+        await safeAlter(`ALTER TABLE cash_register ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();`);
+        // Drop old FK constraints if they exist from previous schema versions
+        await safeAlter(`ALTER TABLE sale_items DROP CONSTRAINT IF EXISTS sale_items_invoice_id_fkey;`);
+        await safeAlter(`ALTER TABLE sale_items DROP CONSTRAINT IF EXISTS sale_items_product_id_fkey;`);
+        await safeAlter(`ALTER TABLE stock_logs DROP CONSTRAINT IF EXISTS stock_logs_product_id_fkey;`);
+        await safeAlter(`ALTER TABLE stock_logs DROP CONSTRAINT IF EXISTS stock_logs_vendor_id_fkey;`);
+        await safeAlter(`ALTER TABLE customer_transactions DROP CONSTRAINT IF EXISTS customer_transactions_customer_id_fkey;`);
+        await safeAlter(`ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_customer_id_fkey;`);
+
+        await browserDb.exec(`UPDATE users SET pin = '0000' WHERE pin IS NULL;`);
+
         await browserDb.exec(`
           INSERT INTO users (id, username, cnic, pin, role)
           VALUES ('46c2226c-1086-4c31-88bb-daf23d830452', 'Mohsin', '3120352438849', '0000', 'Admin')
@@ -614,8 +612,8 @@ export async function receiveKhataPayment(
 
     // 3. Insert into cash_register
     await query(`
-        INSERT INTO cash_register (shift_id, cashier_id, cash_in, cash_out, reason)
-        VALUES ($1, $2, $3, 0, $4)
+        INSERT INTO cash_register (id, shift_id, cashier_id, cash_in, cash_out, reason)
+        VALUES (gen_random_uuid(), $1, $2, $3, 0, $4)
     `, [shiftId, cashierId, amount, `Khata Payment - ${customerName}`]);
 }
 
@@ -645,8 +643,8 @@ export async function giveKhataLoan(
 
     // 3. Insert into cash_register (cash out)
     await query(`
-        INSERT INTO cash_register (shift_id, cashier_id, cash_in, cash_out, reason)
-        VALUES ($1, $2, 0, $3, $4)
+        INSERT INTO cash_register (id, shift_id, cashier_id, cash_in, cash_out, reason)
+        VALUES (gen_random_uuid(), $1, $2, 0, $3, $4)
     `, [shiftId, cashierId, amount, `Khata Loan given - ${customerName}`]);
 }
 
@@ -706,8 +704,8 @@ export async function processCheckout(
     // Insert Cash Register log if money was paid
     if (sale.amount_paid > 0 && shiftId) {
         await query(`
-            INSERT INTO cash_register (shift_id, cashier_id, cash_in, cash_out, reason)
-            VALUES ($1, $2, $3, 0, $4)
+            INSERT INTO cash_register (id, shift_id, cashier_id, cash_in, cash_out, reason)
+            VALUES (gen_random_uuid(), $1, $2, $3, 0, $4)
         `, [shiftId, sale.cashier_id, sale.amount_paid, `Sale Invoice: ${sale.invoice_id}`]);
     }
 }
@@ -724,8 +722,8 @@ export async function addCashTransaction(
     reason: string
 ): Promise<void> {
     await query(`
-        INSERT INTO cash_register (shift_id, cashier_id, cash_in, cash_out, reason)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO cash_register (id, shift_id, cashier_id, cash_in, cash_out, reason)
+        VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
     `, [shiftId, cashierId, cashIn, cashOut, reason]);
 }
 
@@ -830,8 +828,8 @@ export async function processSaleReturn(
         } else {
             // Cash return
             await query(`
-                INSERT INTO cash_register (shift_id, cashier_id, cash_in, cash_out, reason)
-                VALUES ('no-shift', $1, 0, $2, $3)
+                INSERT INTO cash_register (id, shift_id, cashier_id, cash_in, cash_out, reason)
+                VALUES (gen_random_uuid(), 'no-shift', $1, 0, $2, $3)
             `, [cashierName, totalRefundAmount, `Return/Refund for Invoice ${originalSale.invoice_number}`]);
         }
     }
