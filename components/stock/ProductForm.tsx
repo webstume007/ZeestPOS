@@ -211,8 +211,6 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
         </div>
       </div>
 
-      </div>
-
       {!initialData && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
           <div className="space-y-2">
