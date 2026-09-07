@@ -1,7 +1,17 @@
 import { supabase } from './supabase';
 import { query } from './db';
 
-const TABLES = ['products', 'customers', 'sales', 'sale_items', 'cash_register', 'users', 'vendors', 'customer_transactions', 'stock_logs'];
+const TABLES = [
+  'users', 
+  'vendors', 
+  'customers', 
+  'products', 
+  'sales', 
+  'sale_items', 
+  'stock_logs', 
+  'customer_transactions', 
+  'cash_register'
+];
 
 export async function syncDatabase(): Promise<void> {
   console.log('[Sync] Starting background sync...');
@@ -21,6 +31,15 @@ export async function syncDatabase(): Promise<void> {
         const localChanges = await query(`SELECT * FROM ${table} WHERE updated_at > $1 OR updated_at IS NULL`, [lastSynced], false);
         
         if (localChanges.length > 0) {
+          // Fix invalid uuid for cash_register
+          if (table === 'cash_register') {
+            for (const record of localChanges) {
+              if (record.shift_id === 'no-shift') {
+                record.shift_id = null;
+              }
+            }
+          }
+          
           console.log(`[Sync] Pushing ${localChanges.length} records for ${table} to Supabase`);
           const { error } = await supabase.from(table).upsert(localChanges);
           if (error) {
