@@ -100,6 +100,18 @@ async function initDB() {
         value TEXT,
         updated_at TIMESTAMP DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS customer_transactions (
+        id UUID PRIMARY KEY,
+        customer_id UUID REFERENCES customers(id),
+        type TEXT,
+        amount NUMERIC,
+        balance_after NUMERIC,
+        description TEXT,
+        created_by TEXT,
+        timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+        updated_at TIMESTAMP DEFAULT NOW()
+    );
   `;
   
   await db.exec(schemaSQL);

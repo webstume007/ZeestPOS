@@ -43,6 +43,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = (userData: User) => {
     setUser(userData);
     localStorage.setItem("auth_user", JSON.stringify(userData));
+    const username = userData.username || "Admin";
+    const shiftId = `shift_${username}_${new Date().toISOString().split('T')[0]}`;
+    localStorage.setItem("active_shift_id", shiftId);
+    localStorage.setItem("active_cashier_id", username);
+    localStorage.setItem("cashierName", username);
     router.push("/");
   };
 
@@ -51,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("auth_user");
     localStorage.removeItem("active_shift_id");
     localStorage.removeItem("active_cashier_id");
+    localStorage.removeItem("cashierName");
     router.push("/login");
   };
 

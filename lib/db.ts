@@ -42,6 +42,17 @@ export interface Customer {
     customer_type: string | null;
 }
 
+export interface CustomerTransaction {
+    id: string;
+    customer_id: string;
+    type: 'payment' | 'loan' | 'sale_credit';
+    amount: number;
+    balance_after: number;
+    description: string;
+    created_by: string;
+    timestamp: string;
+}
+
 export interface Sale {
     invoice_id: string;
     timestamp: string;
@@ -282,6 +293,16 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
             buy_price NUMERIC,
             timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
           );
+          CREATE TABLE IF NOT EXISTS customer_transactions (
+            id UUID PRIMARY KEY,
+            customer_id UUID REFERENCES customers(id),
+            type TEXT,
+            amount NUMERIC,
+            balance_after NUMERIC,
+            description TEXT,
+            created_by TEXT,
+            timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+          );
         `);
       } catch (e: any) {
         console.error("Failed to initialize browser DB", e);
@@ -449,21 +470,50 @@ export async function getCustomerSales(customerId: string): Promise<Sale[]> {
     return await query<Sale>('SELECT * FROM sales WHERE customer_id = $1 ORDER BY timestamp DESC', [customerId]);
 }
 
+export async function getCustomerTransactions(customerId: string): Promise<CustomerTransaction[]> {
+    return await query<CustomerTransaction>(`
+        SELECT * FROM customer_transactions 
+        WHERE customer_id = $1 
+        ORDER BY timestamp DESC
+    `, [customerId]);
+}
+
+export async function getProductStockLogs(productId: string): Promise<StockLog[]> {
+    return await query<StockLog>(`
+        SELECT s.*, p.name_en as product_name, v.name as vendor_name 
+        FROM stock_logs s
+        JOIN products p ON s.product_id = p.id
+        LEFT JOIN vendors v ON s.vendor_id = v.id
+        WHERE s.product_id = $1
+        ORDER BY s.timestamp DESC
+    `, [productId]);
+}
+
 export async function receiveKhataPayment(
     customerId: string, 
     amount: number, 
     customerName: string,
     shiftId: string,
-    cashierId: string
+    cashierId: string,
+    createdBy: string = "Admin"
 ): Promise<void> {
     // 1. Update customer credit balance
-    await query(`
+    const updated = await query<Customer>(`
         UPDATE customers 
         SET total_credit_balance = COALESCE(total_credit_balance, 0) - $1 
         WHERE id = $2
+        RETURNING *
     `, [amount, customerId]);
 
-    // 2. Insert into cash_register
+    const newBalance = Number(updated[0]?.total_credit_balance || 0);
+
+    // 2. Insert into customer_transactions log
+    await query(`
+        INSERT INTO customer_transactions (id, customer_id, type, amount, balance_after, description, created_by, timestamp)
+        VALUES (gen_random_uuid(), $1, 'payment', $2, $3, $4, $5, NOW())
+    `, [customerId, amount, newBalance, `Cash payment received - ${customerName}`, createdBy]);
+
+    // 3. Insert into cash_register
     await query(`
         INSERT INTO cash_register (shift_id, cashier_id, cash_in, cash_out, reason)
         VALUES ($1, $2, $3, 0, $4)
@@ -475,16 +525,26 @@ export async function giveKhataLoan(
     amount: number, 
     customerName: string,
     shiftId: string,
-    cashierId: string
+    cashierId: string,
+    createdBy: string = "Admin"
 ): Promise<void> {
     // 1. Update customer credit balance (increase)
-    await query(`
+    const updated = await query<Customer>(`
         UPDATE customers 
         SET total_credit_balance = COALESCE(total_credit_balance, 0) + $1 
         WHERE id = $2
+        RETURNING *
     `, [amount, customerId]);
 
-    // 2. Insert into cash_register (cash out)
+    const newBalance = Number(updated[0]?.total_credit_balance || 0);
+
+    // 2. Insert into customer_transactions log
+    await query(`
+        INSERT INTO customer_transactions (id, customer_id, type, amount, balance_after, description, created_by, timestamp)
+        VALUES (gen_random_uuid(), $1, 'loan', $2, $3, $4, $5, NOW())
+    `, [customerId, amount, newBalance, `Credit loan given - ${customerName}`, createdBy]);
+
+    // 3. Insert into cash_register (cash out)
     await query(`
         INSERT INTO cash_register (shift_id, cashier_id, cash_in, cash_out, reason)
         VALUES ($1, $2, 0, $3, $4)
@@ -522,11 +582,26 @@ export async function processCheckout(
 
     // Update Customer Credit if applicable
     if (creditUpdate && creditUpdate.amountToAdd > 0) {
-        await query(`
+        const updated = await query<Customer>(`
             UPDATE customers 
             SET total_credit_balance = COALESCE(total_credit_balance, 0) + $1 
             WHERE id = $2
+            RETURNING *
         `, [creditUpdate.amountToAdd, creditUpdate.customerId]);
+
+        const newBalance = Number(updated[0]?.total_credit_balance || 0);
+        const cashierName = (typeof window !== 'undefined' ? localStorage.getItem("cashierName") : null) || sale.cashier_id || "Cashier";
+
+        await query(`
+            INSERT INTO customer_transactions (id, customer_id, type, amount, balance_after, description, created_by, timestamp)
+            VALUES (gen_random_uuid(), $1, 'sale_credit', $2, $3, $4, $5, NOW())
+        `, [
+            creditUpdate.customerId, 
+            creditUpdate.amountToAdd, 
+            newBalance, 
+            `Added to Khata on invoice #${sale.invoice_number || sale.invoice_id.split('-')[0]}`, 
+            cashierName
+        ]);
     }
 
     // Insert Cash Register log if money was paid

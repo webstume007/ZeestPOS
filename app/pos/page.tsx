@@ -226,7 +226,8 @@ export default function POSPage() {
     setIsProcessing(true);
     try {
       const date = new Date();
-      const invoiceString = `${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}${date.getHours().toString().padStart(2, '0')}${date.getMinutes().toString().padStart(2, '0')}${date.getSeconds().toString().padStart(2, '0')}-${localStorage.getItem("cashierName")?.replace(/\\s+/g, '') || "cashier"}`;
+      const activeUsername = localStorage.getItem("cashierName") || localStorage.getItem("active_cashier_id") || cashierId || "Admin";
+      const invoiceString = `${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}${date.getHours().toString().padStart(2, '0')}${date.getMinutes().toString().padStart(2, '0')}${date.getSeconds().toString().padStart(2, '0')}-${activeUsername.replace(/\s+/g, '')}`;
       
       const invoice_id = crypto.randomUUID();
       const isKhata = paymentMethod === "khata";
@@ -239,7 +240,7 @@ export default function POSPage() {
       const payload = {
           invoice_id,
           customer_id: selectedCustomer ? selectedCustomer.id : null,
-          cashier_id: cashierId,
+          cashier_id: activeUsername,
           total_amount: cartTotal,
           amount_paid: amountPaid,
           payment_status: isKhata && unpaidRemaining > 0 ? "partial" : "paid",

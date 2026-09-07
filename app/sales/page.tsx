@@ -238,6 +238,7 @@ export default function SalesHistory() {
                 <tr>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Invoice</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Account</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date & Time</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Amount</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Paid Amount</th>
@@ -247,11 +248,11 @@ export default function SalesHistory() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">Loading sales history...</td>
+                    <td colSpan={7} className="px-6 py-12 text-center text-slate-500">Loading sales history...</td>
                   </tr>
                 ) : filteredSales.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
+                    <td colSpan={7} className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center justify-center text-slate-500">
                         <FileText className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-3" />
                         <p className="font-medium">No sales records found for this period.</p>
@@ -270,6 +271,11 @@ export default function SalesHistory() {
                       <td className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white">
                         {sale.customer_name || "Walk-in Customer"}
                       </td>
+                      <td className="px-6 py-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700">
+                          👤 {sale.cashier_id || "Admin"}
+                        </span>
+                      </td>
                       <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400">
                         {sale.timestamp ? format(new Date(sale.timestamp), "MMM d, yyyy h:mm a") : "Unknown"}
                       </td>
@@ -282,7 +288,7 @@ export default function SalesHistory() {
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                           sale.payment_status === "paid" 
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" 
                             : "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
                         }`}>
                           {sale.payment_status === "paid" ? "Paid" : "Khata"}
@@ -310,9 +316,14 @@ export default function SalesHistory() {
                 <div key={sale.invoice_id} className="p-4 flex flex-col gap-2.5">
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className="font-mono text-[11px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md mb-1 inline-block">
-                        {sale.invoice_number || `${sale.invoice_id.split("-")[0]}...`}
-                      </span>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono text-[11px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md inline-block">
+                          {sale.invoice_number || `${sale.invoice_id.split("-")[0]}...`}
+                        </span>
+                        <span className="text-[10px] text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                          👤 {sale.cashier_id || "Admin"}
+                        </span>
+                      </div>
                       <h4 className="font-bold text-sm text-slate-900 dark:text-white">{sale.customer_name || "Walk-in"}</h4>
                       <p className="text-[11px] text-slate-500 mt-0.5">
                         {sale.timestamp ? format(new Date(sale.timestamp), "MMM d, h:mm a") : "Unknown"}

@@ -5,7 +5,7 @@ import { Product, createProduct, updateProduct, getSetting, getVendors, createVe
 import { Plus } from "lucide-react";
 
 interface ProductFormProps {
-  initialData?: Product;
+  initialData?: Partial<Product> & { id?: string };
   onSuccess: () => void;
   onCancel: () => void;
 }
