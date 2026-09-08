@@ -10,6 +10,15 @@ interface ProductFormProps {
   onCancel: () => void;
 }
 
+interface VariationInput {
+  id: string;
+  variation_name: string;
+  current_stock: number;
+  buy_price: string;
+  wholesale_shopkeeper_price: string;
+  retail_price: string;
+}
+
 export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -19,10 +28,13 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
     unit: initialData?.unit || "pcs",
     current_stock: initialData?.current_stock || 0,
     buy_price: initialData?.buy_price || 0,
-    retail_price: initialData?.retail_price || 0,
     wholesale_shopkeeper_price: initialData?.wholesale_shopkeeper_price || 0,
+    retail_price: initialData?.retail_price || 0,
     vendor_id: initialData?.vendor_id || "",
+    variation_name: initialData?.variation_name || "",
   });
+
+  const [variations, setVariations] = useState<VariationInput[]>([]);
 
   const unitOptions = ["pcs", "Ltr", "ml", "kg", "g", "size", "pack", "box"];
 
@@ -118,16 +130,54 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
         finalVendorId = newVendor.id;
       }
 
-      const payload = {
-        ...formData,
+      const basePayload = {
+        name_en: formData.name_en,
+        name_ur: formData.name_ur,
+        category: formData.category,
+        unit: formData.unit,
         vendor_id: finalVendorId || null,
         buy_time: new Date().toISOString(),
       };
 
       if (initialData?.id) {
-        await updateProduct(initialData.id, payload);
+        // Editing single product
+        await updateProduct(initialData.id, {
+          ...basePayload,
+          current_stock: formData.current_stock,
+          buy_price: formData.buy_price,
+          wholesale_shopkeeper_price: formData.wholesale_shopkeeper_price,
+          retail_price: formData.retail_price,
+          variation_name: formData.variation_name || null,
+        });
       } else {
-        await createProduct(payload);
+        // Creating new product(s)
+        const groupId = crypto.randomUUID();
+        
+        if (variations.length > 0) {
+          // Create a product for each variation
+          for (const v of variations) {
+            await createProduct({
+              ...basePayload,
+              variation_name: v.variation_name || null,
+              group_id: groupId,
+              current_stock: v.current_stock,
+              buy_price: v.buy_price !== "" ? Number(v.buy_price) : formData.buy_price,
+              wholesale_shopkeeper_price: v.wholesale_shopkeeper_price !== "" ? Number(v.wholesale_shopkeeper_price) : formData.wholesale_shopkeeper_price,
+              retail_price: v.retail_price !== "" ? Number(v.retail_price) : formData.retail_price,
+            });
+          }
+        } else {
+          // Normal single creation
+          await createProduct({
+            ...basePayload,
+            current_stock: formData.current_stock,
+            buy_price: formData.buy_price,
+            wholesale_shopkeeper_price: formData.wholesale_shopkeeper_price,
+            retail_price: formData.retail_price,
+            variation_name: formData.variation_name || null,
+            group_id: groupId,
+          });
+        }
       }
       onSuccess();
     } catch (error) {
@@ -161,6 +211,21 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
         }
       }
     }
+  };
+
+  const addVariation = () => {
+    setVariations(prev => [
+      ...prev,
+      { id: crypto.randomUUID(), variation_name: "", current_stock: 0, buy_price: "", wholesale_shopkeeper_price: "", retail_price: "" }
+    ]);
+  };
+
+  const removeVariation = (id: string) => {
+    setVariations(prev => prev.filter(v => v.id !== id));
+  };
+
+  const updateVariation = (id: string, field: keyof VariationInput, value: string | number) => {
+    setVariations(prev => prev.map(v => v.id === id ? { ...v, [field]: value } : v));
   };
 
   return (
@@ -365,43 +430,14 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
           )}
         </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            {initialData ? "Current Stock (Edit)" : "Initial Stock"}
-          </label>
-          <input
-            type="number"
-            name="current_stock"
-            value={formData.current_stock}
-            onChange={handleChange}
-            required
-            min="0"
-            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-          />
-        </div>
+      {/* Prices Container */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Buy Price</label>
           <input
             type="number"
             name="buy_price"
             value={formData.buy_price}
-            onChange={handleChange}
-            required
-            min="0"
-            step="0.01"
-            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Retail Price</label>
-          <input
-            type="number"
-            name="retail_price"
-            value={formData.retail_price}
             onChange={handleChange}
             required
             min="0"
@@ -422,7 +458,150 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
             className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
           />
         </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Retail Price</label>
+          <input
+            type="number"
+            name="retail_price"
+            value={formData.retail_price}
+            onChange={handleChange}
+            required
+            min="0"
+            step="0.01"
+            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+          />
+        </div>
       </div>
+
+      {/* Basic Stock Section (only if no variations) */}
+      {variations.length === 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              {initialData ? "Current Stock (Edit)" : "Initial Stock"}
+            </label>
+            <input
+              type="number"
+              name="current_stock"
+              value={formData.current_stock}
+              onChange={handleChange}
+              required
+              min="0"
+              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            />
+          </div>
+          {initialData?.id && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Variation Name (Optional)</label>
+              <input
+                type="text"
+                name="variation_name"
+                value={formData.variation_name}
+                onChange={handleChange}
+                placeholder="e.g. Dry Skin, 100ml"
+                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Variations Section - Only for new products */}
+      {!initialData?.id && (
+        <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white">Product Variations</h3>
+              <p className="text-xs text-slate-500">Add variations like Dry Skin, Normal Skin. Leave pricing empty to use main product prices.</p>
+            </div>
+            <button
+              type="button"
+              onClick={addVariation}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium rounded-lg text-sm hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors shrink-0"
+            >
+              <Plus className="w-4 h-4" /> Add Variety
+            </button>
+          </div>
+
+          {variations.length > 0 && (
+            <div className="space-y-3">
+              {variations.map((v, index) => (
+                <div key={v.id} className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl relative">
+                  <button
+                    type="button"
+                    onClick={() => removeVariation(v.id)}
+                    className="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-500 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-2 pr-6">
+                    <div className="md:col-span-1">
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">Variety Name</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Dry Skin"
+                        value={v.variation_name}
+                        onChange={(e) => updateVariation(v.id, "variation_name", e.target.value)}
+                        className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">Initial Stock</label>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        value={v.current_stock}
+                        onChange={(e) => updateVariation(v.id, "current_stock", Number(e.target.value))}
+                        className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">Buy Price</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Default"
+                        value={v.buy_price}
+                        onChange={(e) => updateVariation(v.id, "buy_price", e.target.value)}
+                        className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">Wholesale</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Default"
+                        value={v.wholesale_shopkeeper_price}
+                        onChange={(e) => updateVariation(v.id, "wholesale_shopkeeper_price", e.target.value)}
+                        className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">Retail</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Default"
+                        value={v.retail_price}
+                        onChange={(e) => updateVariation(v.id, "retail_price", e.target.value)}
+                        className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex justify-between items-center pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
         <div>

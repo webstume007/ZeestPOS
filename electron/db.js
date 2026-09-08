@@ -27,7 +27,9 @@ async function initDB() {
         retail_price NUMERIC,
         wholesale_shopkeeper_price NUMERIC,
         is_deleted BOOLEAN DEFAULT FALSE,
-        vendor_id UUID
+        vendor_id UUID,
+        variation_name TEXT,
+        group_id UUID
     );
 
     CREATE TABLE IF NOT EXISTS vendors (
@@ -145,6 +147,8 @@ async function initDB() {
     await db.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
     await db.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS vendor_id UUID;`);
     await db.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS unit TEXT;`);
+    await db.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS variation_name TEXT;`);
+    await db.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS group_id UUID;`);
     await db.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name TEXT;`);
     await db.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_amount NUMERIC DEFAULT 0;`);
     await db.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_number TEXT;`);

@@ -658,7 +658,7 @@ export default function POSPage() {
                       >
                         <div className="flex-1 pr-3 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm truncate">{product.name_en}</span>
+                            <span className="font-semibold text-sm truncate">{product.name_en}{product.variation_name ? ` - ${product.variation_name}` : ""}</span>
                             {product.category && (
                               <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-600 text-slate-500 font-semibold uppercase">
                                 {product.category}
@@ -667,7 +667,7 @@ export default function POSPage() {
                           </div>
                           {product.name_ur && (
                             <div className="font-urdu text-xs text-slate-500 mt-0.5 truncate" dir="rtl">
-                              {product.name_ur}
+                              {product.name_ur}{product.variation_name ? ` - ${product.variation_name}` : ""}
                             </div>
                           )}
                           <div className="mt-0.5 text-[11px] text-slate-400">
@@ -766,7 +766,7 @@ export default function POSPage() {
               >
                 <div className="flex-1 min-w-0">
                   <h4 className="font-semibold text-[11px] md:text-xs text-slate-900 dark:text-white truncate">
-                    {item.product.name_en}
+                    {item.product.name_en}{item.product.variation_name ? ` - ${item.product.variation_name}` : ""}
                   </h4>
                   <div className="flex items-center gap-1 mt-0.5">
                     <span className="text-[10px] text-slate-400">@</span>

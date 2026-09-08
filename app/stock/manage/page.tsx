@@ -287,12 +287,12 @@ export default function StockManagement() {
                       <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="font-semibold text-slate-900 dark:text-slate-100">
-                            {product.name_en}
+                            {product.name_en}{product.variation_name ? ` - ${product.variation_name}` : ""}
                           </div>
                           <div className="text-xs text-slate-400">Unit: {product.unit || "pcs"}</div>
                         </td>
                         <td className="px-6 py-4 text-right font-urdu text-lg text-slate-800 dark:text-slate-200">
-                          {product.name_ur || "—"}
+                          {product.name_ur ? `${product.name_ur}${product.variation_name ? ` - ${product.variation_name}` : ""}` : "—"}
                         </td>
                         <td className="px-6 py-4">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200">
@@ -352,9 +352,9 @@ export default function StockManagement() {
                     <div key={product.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors flex flex-col gap-3">
                       <div className="flex justify-between items-start gap-2">
                         <div>
-                          <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{product.name_en}</h3>
+                          <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{product.name_en}{product.variation_name ? ` - ${product.variation_name}` : ""}</h3>
                           {product.name_ur && (
-                            <p className="font-urdu text-sm text-slate-600 dark:text-slate-400 mt-1">{product.name_ur}</p>
+                            <p className="font-urdu text-sm text-slate-600 dark:text-slate-400 mt-1">{product.name_ur}{product.variation_name ? ` - ${product.variation_name}` : ""}</p>
                           )}
                           <div className="flex items-center gap-2 mt-2">
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">

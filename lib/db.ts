@@ -12,6 +12,8 @@ export interface Product {
     wholesale_shopkeeper_price: number | null;
     is_deleted?: boolean | null;
     vendor_id?: string | null;
+    variation_name?: string | null;
+    group_id?: string | null;
 }
 
 export interface Vendor {
@@ -398,15 +400,15 @@ export async function createProduct(product: Omit<Product, 'id'>): Promise<Produ
     const sql = `
         INSERT INTO products (
             id, name_en, name_ur, category, unit, buy_price, buy_time, current_stock,
-            retail_price, wholesale_shopkeeper_price, vendor_id
+            retail_price, wholesale_shopkeeper_price, vendor_id, variation_name, group_id
         ) VALUES (
-            gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+            gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
         ) RETURNING *
     `;
     const params = [
         product.name_en, product.name_ur, product.category, product.unit || null, product.buy_price,
         product.buy_time, product.current_stock, product.retail_price,
-        product.wholesale_shopkeeper_price, product.vendor_id || null
+        product.wholesale_shopkeeper_price, product.vendor_id || null, product.variation_name || null, product.group_id || null
     ];
     const rows = await query<Product>(sql, params);
     clearCache('all_products');
