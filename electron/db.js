@@ -29,7 +29,9 @@ async function initDB() {
         is_deleted BOOLEAN DEFAULT FALSE,
         vendor_id UUID,
         variation_name TEXT,
-        group_id UUID
+        group_id UUID,
+        barcode TEXT,
+        has_no_barcode BOOLEAN DEFAULT FALSE
     );
 
     CREATE TABLE IF NOT EXISTS vendors (
