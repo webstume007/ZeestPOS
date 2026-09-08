@@ -5,8 +5,10 @@ import Link from "next/link";
 import { Modal } from "@/components/ui/Modal";
 import { ProductForm } from "@/components/stock/ProductForm";
 import { AddStockForm } from "@/components/stock/AddStockForm";
+import { DamageLossForm } from "@/components/stock/DamageLossForm";
 import { ProductHistoryModal } from "@/components/stock/ProductHistoryModal";
 import { CategoryManager } from "@/components/stock/CategoryManager";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { getProducts, deleteProduct, Product } from "@/lib/db";
 import { 
   Plus, 
@@ -32,7 +34,11 @@ export default function StockManagement() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [historyProduct, setHistoryProduct] = useState<Product | undefined>();
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isDamageModalOpen, setIsDamageModalOpen] = useState(false);
+  const [damageProduct, setDamageProduct] = useState<Product | undefined>();
   const [loading, setLoading] = useState(true);
+
+  const { user } = useAuth();
 
   const fetchProducts = async () => {
     try {
@@ -120,21 +126,21 @@ export default function StockManagement() {
     setHistoryProduct(undefined);
   };
 
+  const handleOpenDamageModal = (product: Product) => {
+    setDamageProduct(product);
+    setIsDamageModalOpen(true);
+  };
+
+  const handleCloseDamageModal = () => {
+    setIsDamageModalOpen(false);
+    setDamageProduct(undefined);
+  };
+
   const handleSuccess = () => {
     fetchProducts();
     handleCloseProductModal();
     handleCloseStockModal();
-  };
-
-  const handleDelete = async (id: string, name?: string | null) => {
-    if (confirm(`Are you sure you want to delete "${name || "this product"}"?`)) {
-      try {
-        await deleteProduct(id);
-        fetchProducts();
-      } catch (error) {
-        console.error("Failed to delete product:", error);
-      }
-    }
+    handleCloseDamageModal();
   };
 
   return (
@@ -316,10 +322,10 @@ export default function StockManagement() {
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-end gap-1.5">
                             <button onClick={() => handleOpenStockModal(product)} className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors" title="Add Stock"><ArrowUpCircle className="w-4 h-4" /></button>
+                            <button onClick={() => handleOpenDamageModal(product)} className="p-2 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-colors" title="Record Damaged/Lost Units"><AlertTriangle className="w-4 h-4" /></button>
                             <button onClick={() => handleOpenHistoryModal(product)} className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors" title="Price & Purchase History"><History className="w-4 h-4" /></button>
                             <button onClick={() => handleCloneProduct(product)} className="p-2 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg transition-colors" title="Clone Product"><Copy className="w-4 h-4" /></button>
                             <button onClick={() => handleOpenProductModal(product)} className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Edit Product"><Edit2 className="w-4 h-4" /></button>
-                            <button onClick={() => handleDelete(product.id, product.name_en)} className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Delete Product"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </td>
                       </tr>
@@ -383,6 +389,9 @@ export default function StockManagement() {
                         <button onClick={() => handleOpenStockModal(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
                           <ArrowUpCircle className="w-3.5 h-3.5" /> Stock
                         </button>
+                        <button onClick={() => handleOpenDamageModal(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
+                          <AlertTriangle className="w-3.5 h-3.5" /> Loss
+                        </button>
                         <button onClick={() => handleOpenProductModal(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
@@ -391,9 +400,6 @@ export default function StockManagement() {
                         </button>
                         <button onClick={() => handleOpenHistoryModal(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
                           <History className="w-3.5 h-3.5" /> Logs
-                        </button>
-                        <button onClick={() => handleDelete(product.id, product.name_en)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
-                          <Trash2 className="w-3.5 h-3.5" /> Del
                         </button>
                       </div>
                     </div>
@@ -436,6 +442,22 @@ export default function StockManagement() {
             product={stockProduct} 
             onSuccess={handleSuccess} 
             onCancel={handleCloseStockModal} 
+          />
+        )}
+      </Modal>
+
+      {/* Damaged / Lost Units Modal */}
+      <Modal 
+        isOpen={isDamageModalOpen} 
+        onClose={handleCloseDamageModal} 
+        title="Record Damaged or Lost Units"
+      >
+        {damageProduct && (
+          <DamageLossForm 
+            product={damageProduct}
+            cashierName={user?.username || "Admin"}
+            onSuccess={handleSuccess} 
+            onCancel={handleCloseDamageModal} 
           />
         )}
       </Modal>

@@ -872,3 +872,20 @@ export async function processSaleReturn(
         }
     }
 }
+
+export async function recordDamageLoss(productId: string, productName: string, quantity: number, buyPrice: number, cashierName: string): Promise<void> {
+    const totalLoss = quantity * buyPrice;
+    
+    await query(`
+        UPDATE products 
+        SET current_stock = GREATEST(COALESCE(current_stock, 0) - $1, 0) 
+        WHERE id = $2
+    `, [quantity, productId]);
+
+    if (totalLoss > 0) {
+        await query(`
+            INSERT INTO cash_register (id, shift_id, cashier_id, cash_in, cash_out, reason)
+            VALUES (gen_random_uuid(), 'no-shift', $1, 0, $2, $3)
+        `, [cashierName, totalLoss, `Damaged/Lost Inventory: ${productName} (${quantity} units)`]);
+    }
+}
