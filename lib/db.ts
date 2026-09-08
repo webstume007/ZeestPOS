@@ -203,22 +203,26 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
             address TEXT,
             updated_at TIMESTAMP DEFAULT NOW()
           );
-          CREATE TABLE IF NOT EXISTS products (
-            id UUID PRIMARY KEY,
-            name_en TEXT,
-            name_ur TEXT,
-            category TEXT,
-            buy_price NUMERIC,
-            buy_time TIMESTAMP,
-            current_stock INTEGER,
-            retail_price NUMERIC,
-            wholesale_shopkeeper_price NUMERIC,
-            wholesale_customer_price NUMERIC,
-            is_deleted BOOLEAN DEFAULT FALSE,
-            vendor_id UUID,
-            unit TEXT,
-            updated_at TIMESTAMP DEFAULT NOW()
-          );
+            CREATE TABLE IF NOT EXISTS products (
+              id UUID PRIMARY KEY,
+              name_en TEXT,
+              name_ur TEXT,
+              category TEXT,
+              buy_price NUMERIC,
+              buy_time TIMESTAMP,
+              current_stock INTEGER,
+              retail_price NUMERIC,
+              wholesale_shopkeeper_price NUMERIC,
+              wholesale_customer_price NUMERIC,
+              is_deleted BOOLEAN DEFAULT FALSE,
+              vendor_id UUID,
+              unit TEXT,
+              variation_name TEXT,
+              group_id UUID,
+              barcode TEXT,
+              has_no_barcode BOOLEAN DEFAULT FALSE,
+              updated_at TIMESTAMP DEFAULT NOW()
+            );
           CREATE TABLE IF NOT EXISTS customers (
             id UUID PRIMARY KEY,
             full_name TEXT,
@@ -371,6 +375,20 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
             console.error(`Failed to create trigger for ${table}`, e);
           }
         }
+
+          // Apply schema migrations (ignore errors if columns already exist)
+          try {
+            await browserDb.exec(`
+              ALTER TABLE products ADD COLUMN variation_name TEXT;
+              ALTER TABLE products ADD COLUMN group_id UUID;
+              ALTER TABLE products ADD COLUMN barcode TEXT;
+              ALTER TABLE products ADD COLUMN has_no_barcode BOOLEAN DEFAULT FALSE;
+            `);
+          } catch (e) {
+            // Columns likely already exist
+          }
+
+          console.log("Browser DB initialized successfully.");
 
       } catch (e: any) {
         console.error("Failed to initialize browser DB", e);

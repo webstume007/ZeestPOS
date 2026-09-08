@@ -154,6 +154,8 @@ async function initDB() {
     await db.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name TEXT;`);
     await db.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_amount NUMERIC DEFAULT 0;`);
     await db.exec(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_number TEXT;`);
+    await db.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS barcode TEXT;`);
+    await db.exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS has_no_barcode BOOLEAN DEFAULT FALSE;`);
   } catch (e) {}
 
   // PGlite trigger creation
