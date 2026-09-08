@@ -454,31 +454,16 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
               name="barcode"
               value={formData.barcode}
               onChange={handleChange}
-              disabled={formData.has_no_barcode}
-              className="flex-1 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50"
+              className="flex-1 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               placeholder="Barcode number"
             />
             <button
               type="button"
               onClick={() => setIsScannerOpen(true)}
-              disabled={formData.has_no_barcode}
-              className="px-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-2 disabled:opacity-50 transition-colors font-medium"
+              className="px-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors font-medium"
             >
-              <Camera className="w-5 h-5" /> (Optional) Scan Barcode
+              <Camera className="w-5 h-5" /> Scan Barcode
             </button>
-          </div>
-          <div className="flex items-center gap-2 mt-2">
-            <input
-              type="checkbox"
-              id="has_no_barcode"
-              name="has_no_barcode"
-              checked={formData.has_no_barcode}
-              onChange={handleChange}
-              className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
-            />
-            <label htmlFor="has_no_barcode" className="text-sm font-medium text-slate-700 dark:text-slate-400 select-none">
-              Product has no Barcode
-            </label>
           </div>
         </div>
       </div>
@@ -563,96 +548,111 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
       {/* Variations Section - Only for new products */}
       {!initialData?.id && (
         <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
             <div>
               <h3 className="font-semibold text-slate-900 dark:text-white">Product Variations</h3>
               <p className="text-xs text-slate-500">Add variations like Dry Skin, Normal Skin. Leave pricing empty to use main product prices.</p>
             </div>
-            <button
-              type="button"
-              onClick={addVariation}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium rounded-lg text-sm hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors shrink-0"
-            >
-              <Plus className="w-4 h-4" /> Add Variety
-            </button>
           </div>
 
           {variations.length > 0 && (
-            <div className="space-y-3">
-              {variations.map((v, index) => (
-                <div key={v.id} className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl relative">
-                  <button
-                    type="button"
-                    onClick={() => removeVariation(v.id)}
-                    className="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-500 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-2 pr-6">
-                    <div className="md:col-span-1">
-                      <label className="text-xs font-medium text-slate-500 mb-1 block">Variety Name</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Dry Skin"
-                        value={v.variation_name}
-                        onChange={(e) => updateVariation(v.id, "variation_name", e.target.value)}
-                        className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 mb-1 block">Initial Stock</label>
-                      <input
-                        type="number"
-                        min="0"
-                        required
-                        value={v.current_stock}
-                        onChange={(e) => updateVariation(v.id, "current_stock", Number(e.target.value))}
-                        className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 mb-1 block">Buy Price</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="Default"
-                        value={v.buy_price}
-                        onChange={(e) => updateVariation(v.id, "buy_price", e.target.value)}
-                        className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 mb-1 block">Wholesale</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="Default"
-                        value={v.wholesale_shopkeeper_price}
-                        onChange={(e) => updateVariation(v.id, "wholesale_shopkeeper_price", e.target.value)}
-                        className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 mb-1 block">Retail</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="Default"
-                        value={v.retail_price}
-                        onChange={(e) => updateVariation(v.id, "retail_price", e.target.value)}
-                        className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+            <div className="space-y-4">
+              <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block">Main Product Variety Name (Optional)</label>
+                <input
+                  type="text"
+                  name="variation_name"
+                  value={formData.variation_name}
+                  onChange={handleChange}
+                  placeholder="e.g. Original"
+                  className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="space-y-3">
+                {variations.map((v) => (
+                  <div key={v.id} className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl relative">
+                    <button
+                      type="button"
+                      onClick={() => removeVariation(v.id)}
+                      className="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-500 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-2 pr-6">
+                      <div className="md:col-span-1">
+                        <label className="text-xs font-medium text-slate-500 mb-1 block">Variety Name</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Dry Skin"
+                          value={v.variation_name}
+                          onChange={(e) => updateVariation(v.id, "variation_name", e.target.value)}
+                          className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 mb-1 block">Initial Stock</label>
+                        <input
+                          type="number"
+                          min="0"
+                          required
+                          value={v.current_stock}
+                          onChange={(e) => updateVariation(v.id, "current_stock", Number(e.target.value))}
+                          className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 mb-1 block">Buy Price</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Default"
+                          value={v.buy_price}
+                          onChange={(e) => updateVariation(v.id, "buy_price", e.target.value)}
+                          className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 mb-1 block">Wholesale</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Default"
+                          value={v.wholesale_shopkeeper_price}
+                          onChange={(e) => updateVariation(v.id, "wholesale_shopkeeper_price", e.target.value)}
+                          className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 mb-1 block">Retail</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Default"
+                          value={v.retail_price}
+                          onChange={(e) => updateVariation(v.id, "retail_price", e.target.value)}
+                          className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={addVariation}
+            className="w-full mt-4 py-3 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all flex items-center justify-center gap-2"
+          >
+            <Plus className="w-5 h-5" /> Add New Variation
+          </button>
         </div>
       )}
 

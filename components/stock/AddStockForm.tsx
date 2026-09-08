@@ -186,26 +186,26 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl mb-4 border border-slate-100 dark:border-slate-700 relative">
         <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Adding Stock For</p>
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="font-semibold text-lg text-slate-900 dark:text-white">
-              {product.name_en} {product.variation_name ? `- ${product.variation_name}` : ""} {product.name_ur ? <span className="text-slate-400 font-normal font-urdu">({product.name_ur})</span> : null}
-            </p>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mt-2">
-              <span>Current Stock: <strong className="text-blue-600 dark:text-blue-400">{product.current_stock || 0} {product.unit || "pcs"}</strong></span>
-              <span>Last Buy Price: <strong>Rs. {Number(product.buy_price || 0).toLocaleString()}</strong></span>
-              <span>Retail Price: <strong>Rs. {Number(product.retail_price || 0).toLocaleString()}</strong></span>
+        <div className="flex flex-col">
+          <div className="flex-1 mb-4">
+            <h2 className="font-bold text-xl text-slate-900 dark:text-white mb-4">
+              {product.name_en} {product.variation_name ? `- ${product.variation_name}` : ""} {product.name_ur ? <span className="text-slate-400 font-normal font-urdu ml-2">({product.name_ur})</span> : null}
+            </h2>
+            <div className="flex flex-col gap-2.5 text-sm text-slate-600 dark:text-slate-400">
+              <div className="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+                 <span className="font-medium text-slate-500">Current Stock:</span> 
+                 <strong className="text-blue-600 dark:text-blue-400 text-base">{product.current_stock || 0} {product.unit || "pcs"}</strong>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+                 <span className="font-medium text-slate-500">Last Buy Price:</span> 
+                 <strong className="text-slate-900 dark:text-white text-base">Rs. {Number(product.buy_price || 0).toLocaleString()}</strong>
+              </div>
+              <div className="flex justify-between pb-1">
+                 <span className="font-medium text-slate-500">Retail Price:</span> 
+                 <strong className="text-slate-900 dark:text-white text-base">Rs. {Number(product.retail_price || 0).toLocaleString()}</strong>
+              </div>
             </div>
           </div>
-          {!isNewVariety && (
-            <button
-              type="button"
-              onClick={() => setIsNewVariety(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded-lg text-xs font-semibold hover:bg-purple-100 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" /> Add New Variety
-            </button>
-          )}
         </div>
       </div>
 
@@ -265,6 +265,16 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
             </div>
           </div>
         </div>
+      )}
+
+      {!isNewVariety && (
+        <button
+          type="button"
+          onClick={() => setIsNewVariety(true)}
+          className="w-full py-3 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all flex items-center justify-center gap-2"
+        >
+          <Plus className="w-5 h-5" /> Add New Variety
+        </button>
       )}
 
       <div className="space-y-4">

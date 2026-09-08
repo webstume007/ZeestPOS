@@ -295,9 +295,6 @@ export default function StockManagement() {
                           <div className="font-semibold text-slate-900 dark:text-slate-100">
                             {product.name_en}{product.variation_name ? ` - ${product.variation_name}` : ""}
                           </div>
-                          {(!product.barcode && !product.has_no_barcode) && (
-                            <button onClick={() => handleOpenProductModal(product)} className="text-[10px] font-medium text-blue-600 dark:text-blue-400 hover:underline block mt-0.5">-Add Barcode</button>
-                          )}
                           <div className="text-xs text-slate-400 mt-0.5">Unit: {product.unit || "pcs"}</div>
                         </td>
                         <td className="px-6 py-4 text-right font-urdu text-lg text-slate-800 dark:text-slate-200">
@@ -362,9 +359,6 @@ export default function StockManagement() {
                       <div className="flex justify-between items-start gap-2">
                         <div>
                           <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{product.name_en}{product.variation_name ? ` - ${product.variation_name}` : ""}</h3>
-                          {(!product.barcode && !product.has_no_barcode) && (
-                            <button onClick={() => handleOpenProductModal(product)} className="text-[10px] font-medium text-blue-600 dark:text-blue-400 hover:underline block mt-0.5">-Add Barcode</button>
-                          )}
                           {product.name_ur && (
                             <p className="font-urdu text-sm text-slate-600 dark:text-slate-400 mt-1">{product.name_ur}{product.variation_name ? ` - ${product.variation_name}` : ""}</p>
                           )}
