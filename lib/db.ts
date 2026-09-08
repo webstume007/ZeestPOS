@@ -14,6 +14,8 @@ export interface Product {
     vendor_id?: string | null;
     variation_name?: string | null;
     group_id?: string | null;
+    barcode?: string | null;
+    has_no_barcode?: boolean | null;
 }
 
 export interface Vendor {
@@ -66,6 +68,8 @@ export interface Sale {
     customer_name?: string | null;
     discount_amount?: number;
     invoice_number?: string | null;
+    profit?: number;
+    products_sold?: number;
 }
 
 export interface SaleItem {
@@ -298,6 +302,8 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
         await safeAlter(`ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_customer_price NUMERIC;`);
         await safeAlter(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
         await safeAlter(`ALTER TABLE products ADD COLUMN IF NOT EXISTS unit TEXT;`);
+        await safeAlter(`ALTER TABLE products ADD COLUMN IF NOT EXISTS barcode TEXT;`);
+        await safeAlter(`ALTER TABLE products ADD COLUMN IF NOT EXISTS has_no_barcode BOOLEAN DEFAULT FALSE;`);
         await safeAlter(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name TEXT;`);
         await safeAlter(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_amount NUMERIC DEFAULT 0;`);
         await safeAlter(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_number TEXT;`);
@@ -400,15 +406,16 @@ export async function createProduct(product: Omit<Product, 'id'>): Promise<Produ
     const sql = `
         INSERT INTO products (
             id, name_en, name_ur, category, unit, buy_price, buy_time, current_stock,
-            retail_price, wholesale_shopkeeper_price, vendor_id, variation_name, group_id
+            retail_price, wholesale_shopkeeper_price, vendor_id, variation_name, group_id, barcode, has_no_barcode
         ) VALUES (
-            gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+            gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
         ) RETURNING *
     `;
     const params = [
         product.name_en, product.name_ur, product.category, product.unit || null, product.buy_price,
         product.buy_time, product.current_stock, product.retail_price,
-        product.wholesale_shopkeeper_price, product.vendor_id || null, product.variation_name || null, product.group_id || null
+        product.wholesale_shopkeeper_price, product.vendor_id || null, product.variation_name || null, product.group_id || null,
+        product.barcode || null, product.has_no_barcode || false
     ];
     const rows = await query<Product>(sql, params);
     clearCache('all_products');
@@ -578,6 +585,13 @@ export async function getCustomer(id: string): Promise<Customer> {
 
 export async function getCustomerSales(customerId: string): Promise<Sale[]> {
     return await query<Sale>('SELECT * FROM sales WHERE customer_id = $1 ORDER BY timestamp DESC', [customerId]);
+}
+
+export async function deleteCustomer(id: string): Promise<void> {
+    // We update sales and transactions to keep the record but remove customer reference
+    await query('UPDATE sales SET customer_id = NULL WHERE customer_id = $1', [id]);
+    await query('UPDATE customer_transactions SET customer_id = NULL WHERE customer_id = $1', [id]);
+    await query('DELETE FROM customers WHERE id = $1', [id]);
 }
 
 export async function getCustomerTransactions(customerId: string): Promise<CustomerTransaction[]> {
@@ -762,9 +776,16 @@ export async function updateSetting(key: string, value: string): Promise<void> {
 
 export async function getSales(): Promise<Sale[]> {
     const sql = `
-        SELECT s.*, COALESCE(c.full_name, s.customer_name) as customer_name 
+        SELECT 
+            s.*, 
+            COALESCE(c.full_name, s.customer_name) as customer_name,
+            COALESCE(SUM(si.quantity), 0) as products_sold,
+            COALESCE(SUM((si.price_applied - COALESCE(p.buy_price, 0)) * si.quantity), 0) as profit
         FROM sales s 
         LEFT JOIN customers c ON s.customer_id = c.id 
+        LEFT JOIN sale_items si ON s.invoice_id = si.invoice_id
+        LEFT JOIN products p ON si.product_id = p.id
+        GROUP BY s.invoice_id, c.full_name
         ORDER BY s.timestamp DESC
     `;
     return await query<Sale>(sql);

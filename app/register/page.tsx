@@ -30,6 +30,10 @@ export default function CashRegister() {
     return new Date().toISOString().split("T")[0];
   });
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(20);
+
   const fetchTransactions = async () => {
     setLoading(true);
     try {
@@ -103,6 +107,13 @@ export default function CashRegister() {
   const totalIn = filteredTransactions.reduce((acc, curr) => acc + Number(curr.cash_in), 0);
   const totalOut = filteredTransactions.reduce((acc, curr) => acc + Number(curr.cash_out), 0);
   const netBalance = totalIn - totalOut;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [timeFilter, startDate, endDate]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / itemsPerPage));
+  const paginatedTransactions = filteredTransactions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto h-full flex flex-col">
@@ -230,12 +241,12 @@ export default function CashRegister() {
                 <tr>
                   <td colSpan={4} className="py-8 text-center text-slate-500">Loading transactions...</td>
                 </tr>
-              ) : filteredTransactions.length === 0 ? (
+              ) : paginatedTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-8 text-center text-slate-500">No transactions found for the selected period.</td>
                 </tr>
               ) : (
-                filteredTransactions.map((tx, idx) => (
+                paginatedTransactions.map((tx, idx) => (
                   <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="py-3 md:py-4 pr-2 md:pr-6 whitespace-nowrap">
                       <div className="font-mono text-[10px] md:text-xs text-slate-500">{format(new Date(tx.timestamp), "dd MMM, hh:mm a")}</div>
@@ -254,6 +265,45 @@ export default function CashRegister() {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">Show:</span>
+              <select 
+                value={itemsPerPage} 
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
+              >
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-xs font-medium text-slate-500">
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Previous
+                </button>
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <Modal isOpen={isCashModalOpen} onClose={() => setIsCashModalOpen(false)} title={`Manual Cash ${cashType === "in" ? "In" : "Out"}`}>

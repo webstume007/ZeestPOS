@@ -3,9 +3,11 @@
 import { useEffect, useState, use } from "react";
 import { Customer, Sale, CustomerTransaction, getCustomer, getCustomerSales, getCustomerTransactions, receiveKhataPayment, giveKhataLoan, updateCustomer } from "@/lib/db";
 import { Modal } from "@/components/ui/Modal";
-import { User, Receipt, History, Wallet, ArrowDownRight, ArrowUpRight, BookOpen, ShieldCheck, Clock, Edit2, Phone, MapPin } from "lucide-react";
+import { User, Receipt, History, Wallet, ArrowDownRight, ArrowUpRight, BookOpen, ShieldCheck, Clock, Edit2, Phone, MapPin, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { deleteCustomer } from "@/lib/db";
+import { useRouter } from "next/navigation";
 
 export default function CustomerProfile({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -32,6 +34,10 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({ full_name: "", whatsapp_number: "", address: "", customer_type: "Regular" });
   const [savingEdit, setSavingEdit] = useState(false);
+  
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const router = useRouter();
 
   const fetchCustomerData = async () => {
     try {
@@ -59,6 +65,22 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
       console.error("Failed to update customer:", error);
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteCustomer = async () => {
+    if (deleteConfirmName.trim().toLowerCase() !== customer?.full_name?.toLowerCase()) {
+      alert("Name does not match.");
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      await deleteCustomer(customer!.id);
+      router.push("/customers");
+    } catch (error) {
+      console.error("Failed to delete customer:", error);
+      setIsDeleting(false);
     }
   };
 
@@ -505,21 +527,59 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
               <option value="Sale Customer">Sale Customer</option>
             </select>
           </div>
-          <div className="flex justify-end gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={() => setIsEditModalOpen(false)}
-              className="px-6 py-2.5 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={savingEdit}
-              className="px-6 py-2.5 rounded-xl font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {savingEdit ? "Saving..." : "Save Changes"}
-            </button>
+          <div className="flex justify-between items-center pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div>
+              {isDeleting ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Type name to confirm"
+                    value={deleteConfirmName}
+                    onChange={(e) => setDeleteConfirmName(e.target.value)}
+                    className="p-2 text-xs rounded-lg border border-red-200 dark:border-red-900 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-red-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleDeleteCustomer}
+                    className="px-3 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setIsDeleting(false); setDeleteConfirmName(""); }}
+                    className="px-3 py-2 bg-slate-200 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsDeleting(true)}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => { setIsEditModalOpen(false); setIsDeleting(false); setDeleteConfirmName(""); }}
+                className="px-6 py-2.5 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingEdit || isDeleting}
+                className="px-6 py-2.5 rounded-xl font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {savingEdit ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>

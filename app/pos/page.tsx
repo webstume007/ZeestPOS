@@ -22,10 +22,12 @@ import {
   Phone,
   AlertTriangle,
   Keyboard,
+  Camera,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { InvoiceReceipt } from "@/components/pos/InvoiceReceipt";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { BarcodeScanner } from "@/components/ui/BarcodeScanner";
 import Fuse from "fuse.js";
 
 type PricingTier = "retail_price" | "wholesale_shopkeeper_price";
@@ -67,6 +69,7 @@ export default function POSPage() {
   });
   const [isSavingCustomer, setIsSavingCustomer] = useState(false);
 
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
   const [lastInvoiceData, setLastInvoiceData] = useState<{
     sale: Partial<Sale>;
@@ -118,11 +121,13 @@ export default function POSPage() {
   useEffect(() => {
     productFuse.current = new Fuse(products, {
       keys: [
-        { name: "name_en", weight: 0.55 },
-        { name: "name_ur", weight: 0.35 },
+        { name: "name_en", weight: 0.4 },
+        { name: "variation_name", weight: 0.3 },
+        { name: "barcode", weight: 0.2 },
+        { name: "name_ur", weight: 0.1 },
         { name: "category", weight: 0.1 },
       ],
-      threshold: 0.35,
+      threshold: 0.4,
       ignoreLocation: true,
     });
     customerFuse.current = new Fuse(customers, {
@@ -217,6 +222,17 @@ export default function POSPage() {
     setSearchQuery("");
     focusSearch();
   }, []);
+
+  const handleBarcodeScan = useCallback((decodedText: string) => {
+    setIsScannerOpen(false);
+    const product = products.find(p => p.barcode === decodedText);
+    if (product) {
+      handleProductSelect(product);
+      showToast("Scanned: " + (product.name_en || product.barcode));
+    } else {
+      showToast("Barcode not found");
+    }
+  }, [products, handleProductSelect]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
@@ -617,20 +633,30 @@ export default function POSPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyDown}
               autoFocus
-              className="w-full pl-11 pr-10 py-3 md:py-3.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-sm md:text-base outline-none"
+              className="w-full pl-11 pr-20 py-3 md:py-3.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-sm md:text-base outline-none"
             />
-            {searchQuery && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    focusSearch();
+                  }}
+                  className="text-slate-400 hover:text-slate-600 p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => {
-                  setSearchQuery("");
-                  focusSearch();
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                onClick={() => setIsScannerOpen(true)}
+                className="text-slate-400 hover:text-blue-500 p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
+                title="Scan Barcode"
               >
-                <X className="w-4 h-4" />
+                <Camera className="w-5 h-5" />
               </button>
-            )}
+            </div>
 
             {searchQuery.trim().length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-h-[min(24rem,50vh)] overflow-y-auto z-50 divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -1070,6 +1096,13 @@ export default function POSPage() {
           />
         )}
       </Modal>
+
+      {isScannerOpen && (
+        <BarcodeScanner 
+          onScan={handleBarcodeScan}
+          onClose={() => setIsScannerOpen(false)}
+        />
+      )}
     </div>
   );
 }

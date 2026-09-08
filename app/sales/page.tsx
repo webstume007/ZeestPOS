@@ -26,6 +26,10 @@ export default function SalesHistory() {
     return new Date().toISOString().split("T")[0];
   });
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(20);
+
   // Action Modals
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [saleItems, setSaleItems] = useState<any[]>([]);
@@ -94,6 +98,15 @@ export default function SalesHistory() {
   const totalAmount = filteredSales.reduce((acc, s) => acc + Number(s.total_amount || 0), 0);
   const totalPaid = filteredSales.reduce((acc, s) => acc + Number(s.amount_paid || 0), 0);
   const totalKhata = totalAmount - totalPaid;
+  const totalProfit = filteredSales.reduce((acc, s) => acc + Number(s.profit || 0), 0);
+  const totalItemsSold = filteredSales.reduce((acc, s) => acc + Number(s.products_sold || 0), 0);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, timeFilter, startDate, endDate]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredSales.length / itemsPerPage));
+  const paginatedSales = filteredSales.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleViewInvoice = async (sale: Sale) => {
     setSelectedSale(sale);
@@ -204,34 +217,42 @@ export default function SalesHistory() {
         </div>
 
         {/* Dashboard Metric Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
             <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Invoices</div>
-            <div className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-1">
+            <div className="text-xl font-bold text-slate-900 dark:text-white mt-1">
               {filteredSales.length}
             </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Transactions</div>
           </div>
           <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
             <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Sales</div>
-            <div className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">
+            <div className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">
               Rs {totalAmount.toFixed(0)}
             </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Gross Revenue</div>
           </div>
           <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cash Collected</div>
-            <div className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Profit</div>
+            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+              Rs {totalProfit.toFixed(0)}
+            </div>
+          </div>
+          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Items Sold</div>
+            <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1">
+              {totalItemsSold}
+            </div>
+          </div>
+          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cash</div>
+            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
               Rs {totalPaid.toFixed(0)}
             </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Paid In Cash</div>
           </div>
           <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Khata Credit</div>
-            <div className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Khata</div>
+            <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
               Rs {totalKhata.toFixed(0)}
             </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Pending Receivables</div>
           </div>
         </div>
 
@@ -244,6 +265,8 @@ export default function SalesHistory() {
                   <th className="px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Invoice</th>
                   <th className="px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
                   <th className="px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date & Time</th>
+                  <th className="px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Items</th>
+                  <th className="px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Profit</th>
                   <th className="px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Total</th>
                   <th className="px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Paid</th>
                   <th className="px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Status</th>
@@ -253,11 +276,11 @@ export default function SalesHistory() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-slate-500">Loading sales history...</td>
+                    <td colSpan={9} className="px-6 py-12 text-center text-slate-500">Loading sales history...</td>
                   </tr>
-                ) : filteredSales.length === 0 ? (
+                ) : paginatedSales.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
+                    <td colSpan={9} className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center justify-center text-slate-500">
                         <FileText className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-3" />
                         <p className="font-medium">No sales records found for this period.</p>
@@ -265,7 +288,7 @@ export default function SalesHistory() {
                     </td>
                   </tr>
                 ) : (
-                  filteredSales.map((sale) => (
+                  paginatedSales.map((sale) => (
                     <tr key={sale.invoice_id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="px-4 py-4">
                         <div className="font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300">
@@ -279,8 +302,14 @@ export default function SalesHistory() {
                       <td className="px-4 py-4 text-xs text-slate-600 dark:text-slate-400">
                         {sale.timestamp ? format(new Date(sale.timestamp), "MMM d, yyyy h:mm a") : "Unknown"}
                       </td>
-                      <td className="px-4 py-4 font-bold text-xs text-slate-900 dark:text-white text-right">
-                        Rs {Number(sale.total_amount).toFixed(0)}
+                      <td className="px-4 py-4 font-semibold text-slate-900 dark:text-white text-right">
+                        {sale.products_sold || 0}
+                      </td>
+                      <td className="px-4 py-4 font-semibold text-emerald-600 dark:text-emerald-400 text-right">
+                        Rs {Number(sale.profit || 0).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-4 font-bold text-slate-900 dark:text-white text-right">
+                        Rs {Number(sale.total_amount).toLocaleString()}
                       </td>
                       <td className="px-4 py-4 text-xs font-medium text-emerald-600 dark:text-emerald-400 text-right">
                         Rs {Number(sale.amount_paid).toFixed(0)}
@@ -318,6 +347,45 @@ export default function SalesHistory() {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Show:</span>
+                <select 
+                  value={itemsPerPage} 
+                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                  className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
+                >
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-xs font-medium text-slate-500">
+                  Page {currentPage} of {totalPages}
+                </div>
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       </div>
 

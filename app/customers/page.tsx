@@ -14,10 +14,21 @@ export default function CustomerDirectory() {
   const [formData, setFormData] = useState({ full_name: "", whatsapp_number: "", address: "", customer_type: "Regular" });
   const [saving, setSaving] = useState(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(20);
+
   const filteredCustomers = customers.filter(c => 
     c.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
     c.whatsapp_number?.includes(searchQuery)
   );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / itemsPerPage));
+  const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const fetchCustomers = async () => {
     try {
@@ -85,10 +96,10 @@ export default function CustomerDirectory() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         {loading ? (
           <p className="text-slate-500 col-span-full">Loading customers...</p>
-        ) : filteredCustomers.length === 0 ? (
+        ) : paginatedCustomers.length === 0 ? (
           <p className="text-slate-500 col-span-full">No customers found.</p>
         ) : (
-          filteredCustomers.map(customer => (
+          paginatedCustomers.map(customer => (
             <Link 
               href={`/customers/${customer.id}`} 
               key={customer.id}
@@ -121,6 +132,45 @@ export default function CustomerDirectory() {
           ))
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-6 py-4 mt-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">Show:</span>
+            <select 
+              value={itemsPerPage} 
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none"
+            >
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-xs font-medium text-slate-500">
+              Page {currentPage} of {totalPages}
+            </div>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                Previous
+              </button>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Customer">
         <form onSubmit={handleCreateCustomer} className="space-y-6">

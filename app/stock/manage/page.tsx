@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   ArrowLeft
 } from "lucide-react";
+import Fuse from "fuse.js";
 
 export default function StockManagement() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -75,15 +76,20 @@ export default function StockManagement() {
 
   // Search filtering
   const filteredProducts = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim();
     if (!q) return [];
-    return products.filter((p) => {
-      const matchEn = p.name_en?.toLowerCase().includes(q);
-      const matchUr = p.name_ur?.toLowerCase().includes(q);
-      const matchCat = p.category?.toLowerCase().includes(q);
-      const matchUnit = p.unit?.toLowerCase().includes(q);
-      return matchEn || matchUr || matchCat || matchUnit;
+    const fuse = new Fuse(products, {
+      keys: [
+        { name: "name_en", weight: 0.4 },
+        { name: "variation_name", weight: 0.3 },
+        { name: "barcode", weight: 0.2 },
+        { name: "name_ur", weight: 0.1 },
+        { name: "category", weight: 0.1 },
+      ],
+      threshold: 0.4,
+      ignoreLocation: true,
     });
+    return fuse.search(q).map(result => result.item);
   }, [products, searchQuery]);
 
   const handleOpenProductModal = (product?: Partial<Product>) => {
@@ -289,7 +295,10 @@ export default function StockManagement() {
                           <div className="font-semibold text-slate-900 dark:text-slate-100">
                             {product.name_en}{product.variation_name ? ` - ${product.variation_name}` : ""}
                           </div>
-                          <div className="text-xs text-slate-400">Unit: {product.unit || "pcs"}</div>
+                          {(!product.barcode && !product.has_no_barcode) && (
+                            <button onClick={() => handleOpenProductModal(product)} className="text-[10px] font-medium text-blue-600 dark:text-blue-400 hover:underline block mt-0.5">-Add Barcode</button>
+                          )}
+                          <div className="text-xs text-slate-400 mt-0.5">Unit: {product.unit || "pcs"}</div>
                         </td>
                         <td className="px-6 py-4 text-right font-urdu text-lg text-slate-800 dark:text-slate-200">
                           {product.name_ur ? `${product.name_ur}${product.variation_name ? ` - ${product.variation_name}` : ""}` : "—"}
@@ -353,6 +362,9 @@ export default function StockManagement() {
                       <div className="flex justify-between items-start gap-2">
                         <div>
                           <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{product.name_en}{product.variation_name ? ` - ${product.variation_name}` : ""}</h3>
+                          {(!product.barcode && !product.has_no_barcode) && (
+                            <button onClick={() => handleOpenProductModal(product)} className="text-[10px] font-medium text-blue-600 dark:text-blue-400 hover:underline block mt-0.5">-Add Barcode</button>
+                          )}
                           {product.name_ur && (
                             <p className="font-urdu text-sm text-slate-600 dark:text-slate-400 mt-1">{product.name_ur}{product.variation_name ? ` - ${product.variation_name}` : ""}</p>
                           )}

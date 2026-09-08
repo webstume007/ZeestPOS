@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Product, createProduct, updateProduct, deleteProduct, getSetting, getVendors, createVendor, Vendor } from "@/lib/db";
-import { Plus, Search, Check, ChevronDown, UserPlus, X, Store, Trash2 } from "lucide-react";
+import { Plus, Search, Check, ChevronDown, UserPlus, X, Store, Trash2, Camera } from "lucide-react";
+import { BarcodeScanner } from "@/components/ui/BarcodeScanner";
 
 interface ProductFormProps {
   initialData?: Partial<Product> & { id?: string };
@@ -32,7 +33,11 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
     retail_price: initialData?.retail_price || 0,
     vendor_id: initialData?.vendor_id || "",
     variation_name: initialData?.variation_name || "",
+    barcode: initialData?.barcode || "",
+    has_no_barcode: initialData?.has_no_barcode || false,
   });
+
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const [variations, setVariations] = useState<VariationInput[]>([]);
 
@@ -148,6 +153,8 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
           wholesale_shopkeeper_price: formData.wholesale_shopkeeper_price,
           retail_price: formData.retail_price,
           variation_name: formData.variation_name || null,
+          barcode: formData.barcode || null,
+          has_no_barcode: formData.has_no_barcode,
         });
       } else {
         // Creating new product(s)
@@ -175,6 +182,8 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
             wholesale_shopkeeper_price: formData.wholesale_shopkeeper_price,
             retail_price: formData.retail_price,
             variation_name: formData.variation_name || null,
+            barcode: formData.barcode || null,
+            has_no_barcode: formData.has_no_barcode,
             group_id: groupId,
           });
         }
@@ -189,10 +198,14 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "number" ? parseFloat(value) || 0 : value,
-    }));
+    if (type === "checkbox") {
+      setFormData((prev) => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === "number" ? parseFloat(value) || 0 : value,
+      }));
+    }
   };
 
   const handleDelete = async () => {
@@ -229,8 +242,9 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">English Name</label>
           <input
@@ -430,6 +444,45 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
           )}
         </div>
 
+      {/* Barcode Container */}
+      <div className="grid grid-cols-1 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Barcode</label>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              name="barcode"
+              value={formData.barcode}
+              onChange={handleChange}
+              disabled={formData.has_no_barcode}
+              className="flex-1 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50"
+              placeholder="Barcode number"
+            />
+            <button
+              type="button"
+              onClick={() => setIsScannerOpen(true)}
+              disabled={formData.has_no_barcode}
+              className="px-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-2 disabled:opacity-50 transition-colors font-medium"
+            >
+              <Camera className="w-5 h-5" /> (Optional) Scan Barcode
+            </button>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <input
+              type="checkbox"
+              id="has_no_barcode"
+              name="has_no_barcode"
+              checked={formData.has_no_barcode}
+              onChange={handleChange}
+              className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+            />
+            <label htmlFor="has_no_barcode" className="text-sm font-medium text-slate-700 dark:text-slate-400 select-none">
+              Product has no Barcode
+            </label>
+          </div>
+        </div>
+      </div>
+
       {/* Prices Container */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
         <div className="space-y-2">
@@ -616,11 +669,10 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
             </button>
           )}
         </div>
-        <div className="flex gap-4">
+        <div className="flex justify-end gap-4 pt-6 border-t border-slate-100 dark:border-slate-800">
           <button
             type="button"
             onClick={onCancel}
-            disabled={loading}
             className="px-6 py-2.5 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             Cancel
@@ -628,12 +680,23 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2.5 rounded-xl font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm"
+            className="px-6 py-2.5 rounded-xl font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
           >
-            {loading ? "Saving..." : "Save Product"}
+            {loading ? "Saving..." : initialData?.id ? "Save Changes" : "Create Product"}
           </button>
         </div>
       </div>
     </form>
-  );
+
+    {isScannerOpen && (
+      <BarcodeScanner
+        onScan={(decodedText) => {
+          setFormData(prev => ({ ...prev, barcode: decodedText }));
+          setIsScannerOpen(false);
+        }}
+        onClose={() => setIsScannerOpen(false)}
+      />
+    )}
+  </>
+);
 }
