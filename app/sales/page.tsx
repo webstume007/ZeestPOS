@@ -356,14 +356,21 @@ export default function SalesHistory() {
                 const maxQty = si.item.quantity;
                 const currentReturn = returnQuantities[si.item.id] || 0;
                 return (
-                  <div key={si.item.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border border-slate-200 dark:border-slate-700 rounded-xl gap-2">
+                  <div 
+                    key={si.item.id} 
+                    onClick={() => {
+                      const nextVal = currentReturn >= maxQty ? 0 : currentReturn + 1;
+                      setReturnQuantities(prev => ({...prev, [si.item.id]: nextVal}));
+                    }}
+                    className={`cursor-pointer select-none flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border rounded-xl gap-2 transition-colors ${currentReturn > 0 ? "border-amber-400 bg-amber-50 dark:bg-amber-900/20" : "border-slate-200 dark:border-slate-700"}`}
+                  >
                     <div className="flex-1">
                       <div className="font-semibold text-xs text-slate-900 dark:text-white">{si.product.name_en}</div>
                       <div className="text-[10px] text-slate-500">
                         Bought: {maxQty} @ Rs {Number(si.item.price_applied).toFixed(0)}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       <span className="text-xs text-slate-400">Return Qty:</span>
                       <input 
                         type="number"

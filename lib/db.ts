@@ -821,27 +821,54 @@ export async function processSaleReturn(
     }
 
     if (totalRefundAmount > 0) {
-        // Adjust Sale record
-        await query(`UPDATE sales SET total_amount = total_amount - $1, amount_paid = amount_paid - $1 WHERE invoice_id = $2`, [totalRefundAmount, originalSale.invoice_id]);
+        const originalTotal = Number(originalSale.total_amount || 0);
+        const originalPaid = Number(originalSale.amount_paid || 0);
+        const khataAmount = Math.max(0, originalTotal - originalPaid);
 
-        // If it was Khata, adjust Khata. Else adjust cash register.
+        let refundToKhata = 0;
+        let refundToCash = 0;
+
         if (originalSale.payment_status === "khata" && originalSale.customer_id) {
+            if (totalRefundAmount <= khataAmount) {
+                refundToKhata = totalRefundAmount;
+            } else {
+                refundToKhata = khataAmount;
+                refundToCash = totalRefundAmount - khataAmount;
+            }
+        } else {
+            refundToCash = totalRefundAmount;
+        }
+
+        // Adjust Sale record
+        await query(
+            `UPDATE sales SET total_amount = total_amount - $1, amount_paid = amount_paid - $2 WHERE invoice_id = $3`, 
+            [totalRefundAmount, refundToCash, originalSale.invoice_id]
+        );
+
+        // Update status if fully paid after return
+        await query(
+            `UPDATE sales SET payment_status = 'paid' WHERE invoice_id = $1 AND total_amount <= amount_paid`,
+            [originalSale.invoice_id]
+        );
+
+        if (refundToKhata > 0 && originalSale.customer_id) {
             await query(`
                 UPDATE customers 
                 SET total_credit_balance = total_credit_balance - $1 
                 WHERE id = $2
-            `, [totalRefundAmount, originalSale.customer_id]);
+            `, [refundToKhata, originalSale.customer_id]);
             
             await query(`
                 INSERT INTO customer_transactions (id, customer_id, type, amount, balance_after, description, created_by, timestamp)
                 VALUES (gen_random_uuid(), $1, 'payment', $2, 0, $3, $4, NOW())
-            `, [originalSale.customer_id, totalRefundAmount, `Return/Refund for Invoice ${originalSale.invoice_number}`, cashierName]);
-        } else {
-            // Cash return
+            `, [originalSale.customer_id, refundToKhata, `Return/Refund for Invoice ${originalSale.invoice_number} (Khata Adjustment)`, cashierName]);
+        }
+
+        if (refundToCash > 0) {
             await query(`
                 INSERT INTO cash_register (id, shift_id, cashier_id, cash_in, cash_out, reason)
                 VALUES (gen_random_uuid(), 'no-shift', $1, 0, $2, $3)
-            `, [cashierName, totalRefundAmount, `Return/Refund for Invoice ${originalSale.invoice_number}`]);
+            `, [cashierName, refundToCash, `Cash Refund for Invoice ${originalSale.invoice_number}`]);
         }
     }
 }

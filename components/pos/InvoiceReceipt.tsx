@@ -7,7 +7,7 @@ import { format } from "date-fns";
 interface InvoiceReceiptProps {
   sale: Partial<Sale>;
   items: {
-    product: { name_en?: string | null };
+    product: { name_en?: string | null; name_ur?: string | null };
     quantity: number;
     price_applied: number;
   }[];
@@ -49,14 +49,39 @@ export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
 
   const sendToWhatsAppWeb = async () => {
     if (!receiptRef.current) return;
+    
+    const newWindow = window.open("", "_blank");
+    if (!newWindow) {
+      alert("Please allow popups to share on WhatsApp.");
+      return;
+    }
+
     try {
       const canvas = await html2canvas(receiptRef.current, { scale: 2 });
       canvas.toBlob(async (blob) => {
-        if (!blob) return;
+        if (!blob) {
+          newWindow.close();
+          return;
+        }
+
+        const file = new File([blob], `${sale.invoice_number || "invoice"}.png`, { type: "image/png" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          newWindow.close();
+          try {
+            await navigator.share({
+              files: [file],
+              title: `Invoice ${sale.invoice_number}`,
+            });
+          } catch (e) {
+             console.error("Native share cancelled or failed", e);
+          }
+          return;
+        }
+
         try {
           const item = new ClipboardItem({ "image/png": blob });
           await navigator.clipboard.write([item]);
-          window.open("https://wa.me/?text=Please+paste+the+invoice+image+from+your+clipboard", "_blank");
+          newWindow.location.href = "https://api.whatsapp.com/send?text=Please+paste+the+invoice+image+from+your+clipboard";
         } catch {
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
@@ -64,11 +89,12 @@ export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
           a.download = `${sale.invoice_number || "invoice"}.png`;
           a.click();
           URL.revokeObjectURL(url);
-          window.open("https://wa.me/", "_blank");
+          newWindow.location.href = "https://api.whatsapp.com/send";
         }
       }, "image/png");
     } catch (err) {
       console.error("Failed to generate WhatsApp image", err);
+      if (newWindow) newWindow.close();
     }
   };
 
@@ -102,7 +128,10 @@ export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
             {items.map((item, idx) => (
               <div key={idx} className="flex justify-between text-sm">
                 <div className="pr-4">
-                  <p className="font-medium">{item.product.name_en}</p>
+                  <p className="font-medium">
+                    {item.product.name_en}
+                    {item.product.name_ur && <span className="ml-1 text-xs text-slate-500 font-sans">({item.product.name_ur})</span>}
+                  </p>
                   <p className="text-xs text-slate-500">
                     {item.quantity} x {item.price_applied}
                   </p>
@@ -127,6 +156,10 @@ export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
               <span>Total</span>
               <span>Rs {(Number(sale.total_amount) - Number(sale.discount_amount || 0)).toFixed(0)}</span>
             </div>
+          </div>
+          
+          <div className="text-[9px] text-center text-slate-400 mt-6 pb-2 border-t border-slate-200 pt-3">
+            Software designed by: +923053296062
           </div>
         </div>
       </div>
@@ -159,7 +192,7 @@ export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
             onClick={onDone}
             className="py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm"
           >
-            Next bill
+            Done
           </button>
         )}
       </div>
