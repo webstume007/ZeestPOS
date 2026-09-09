@@ -80,7 +80,8 @@ export async function syncDatabase(forceFull: boolean = false): Promise<void> {
         // Sanitize records before pushing
         const sanitized = localChanges.map(record => {
           const clean = { ...record };
-          clean.updated_at = syncStartTime;
+          // Preserve the original local updated_at timestamp to maintain True Time!
+          // We do not overwrite it with syncStartTime anymore.
           // Fix cash_register: ensure shift_id is null if "no-shift"
           if (table === 'cash_register') {
             if (clean.shift_id === 'no-shift' || !clean.shift_id) {
@@ -150,7 +151,9 @@ export async function syncDatabase(forceFull: boolean = false): Promise<void> {
 
           let pullQuery = supabase.from(table).select('*');
           if (!shouldPullAll && lastSynced !== '1970-01-01T00:00:00.000Z') {
-            pullQuery = pullQuery.gt('updated_at', lastSynced);
+            // 7-day sliding window to catch offline clients pushing older records
+            const windowTime = new Date(new Date(lastSynced).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            pullQuery = pullQuery.gt('updated_at', windowTime);
           }
 
           const { data: remoteChanges, error } = await pullQuery;
@@ -204,7 +207,10 @@ export async function syncDatabase(forceFull: boolean = false): Promise<void> {
               .map(col => `${col} = EXCLUDED.${col}`)
               .join(', ');
             
-            const onConflictAction = setClause ? `DO UPDATE SET ${setClause}` : `DO NOTHING`;
+            // Smart Conflict Resolution: Only overwrite local record if the incoming cloud record is newer or local has no updated_at.
+            const onConflictAction = setClause 
+              ? `DO UPDATE SET ${setClause} WHERE ${table}.updated_at IS NULL OR EXCLUDED.updated_at >= ${table}.updated_at` 
+              : `DO NOTHING`;
 
             const sql = `
               INSERT INTO ${table} (${columns.join(', ')})
@@ -223,7 +229,7 @@ export async function syncDatabase(forceFull: boolean = false): Promise<void> {
                 const vals = Object.values(record);
                 const ph = cols.map((_, idx) => `$${idx + 1}`).join(', ');
                 const sc = cols.filter(c => c !== pk).map(c => `${c} = EXCLUDED.${c}`).join(', ');
-                const onConf = sc ? `DO UPDATE SET ${sc}` : `DO NOTHING`;
+                const onConf = sc ? `DO UPDATE SET ${sc} WHERE ${table}.updated_at IS NULL OR EXCLUDED.updated_at >= ${table}.updated_at` : `DO NOTHING`;
                 try {
                   await query(
                     `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${ph}) ON CONFLICT (${pk}) ${onConf}`,
