@@ -23,7 +23,7 @@ const LOCAL_COLUMNS: Record<string, string[]> = {
   settings: ['key', 'value', 'updated_at'],
   users: ['id', 'username', 'cnic', 'pin', 'role', 'updated_at'],
   vendors: ['id', 'name', 'representative_name', 'contact', 'address', 'updated_at'],
-  customers: ['id', 'full_name', 'whatsapp_number', 'address', 'customer_type', 'total_credit_balance', 'updated_at'],
+  customers: ['id', 'full_name', 'whatsapp_number', 'address', 'customer_type', 'total_credit_balance', 'is_deleted', 'updated_at'],
   products: ['id', 'name_en', 'name_ur', 'category', 'buy_price', 'buy_time', 'current_stock', 'retail_price', 'wholesale_shopkeeper_price', 'wholesale_customer_price', 'is_deleted', 'vendor_id', 'unit', 'variation_name', 'group_id', 'barcode', 'has_no_barcode', 'updated_at'],
   sales: ['invoice_id', 'timestamp', 'customer_id', 'cashier_id', 'total_amount', 'amount_paid', 'payment_status', 'customer_name', 'discount_amount', 'invoice_number', 'updated_at'],
   sale_items: ['id', 'invoice_id', 'product_id', 'quantity', 'price_applied', 'updated_at'],

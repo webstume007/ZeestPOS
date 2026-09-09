@@ -44,6 +44,7 @@ export interface Customer {
     address: string | null;
     total_credit_balance: number | null;
     customer_type: string | null;
+    is_deleted?: boolean | null;
 }
 
 export interface CustomerTransaction {
@@ -230,6 +231,7 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
             address TEXT,
             customer_type TEXT DEFAULT 'Regular',
             total_credit_balance NUMERIC DEFAULT 0,
+            is_deleted BOOLEAN DEFAULT FALSE,
             updated_at TIMESTAMP DEFAULT NOW()
           );
           CREATE TABLE IF NOT EXISTS sales (
@@ -551,7 +553,7 @@ export async function deleteProduct(id: string): Promise<void> {
 }
 
 export async function getCustomers(): Promise<Customer[]> {
-    return await query<Customer>('SELECT * FROM customers ORDER BY full_name ASC');
+    return await query<Customer>('SELECT * FROM customers WHERE is_deleted IS NOT TRUE ORDER BY full_name ASC');
 }
 
 export async function createCustomer(customer: Omit<Customer, 'id' | 'total_credit_balance'>): Promise<Customer> {
@@ -609,7 +611,7 @@ export async function deleteCustomer(id: string): Promise<void> {
     // We update sales and transactions to keep the record but remove customer reference
     await query('UPDATE sales SET customer_id = NULL WHERE customer_id = $1', [id]);
     await query('UPDATE customer_transactions SET customer_id = NULL WHERE customer_id = $1', [id]);
-    await query('DELETE FROM customers WHERE id = $1', [id]);
+    await query('UPDATE customers SET is_deleted = TRUE, updated_at = NOW() WHERE id = $1', [id]);
 }
 
 export async function getCustomerTransactions(customerId: string): Promise<CustomerTransaction[]> {

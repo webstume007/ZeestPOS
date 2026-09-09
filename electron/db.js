@@ -57,7 +57,8 @@ async function initDB() {
         whatsapp_number TEXT,
         address TEXT,
         customer_type TEXT DEFAULT 'Regular',
-        total_credit_balance NUMERIC DEFAULT 0
+        total_credit_balance NUMERIC DEFAULT 0,
+        is_deleted BOOLEAN DEFAULT FALSE
     );
 
     CREATE TABLE IF NOT EXISTS sales (
