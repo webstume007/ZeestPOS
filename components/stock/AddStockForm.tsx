@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Product, getVendors, Vendor, addStockLog, createVendor, createProduct } from "@/lib/db";
+import { Product, getVendors, Vendor, addStockLog, createVendor, createProduct, updateProduct } from "@/lib/db";
 import { Search, Plus, Check, ChevronDown, UserPlus, X, Store } from "lucide-react";
 
 interface AddStockFormProps {
@@ -18,6 +18,9 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
     vendor_id: product.vendor_id || "",
     quantity: 0,
     buy_price: product.buy_price || 0,
+    retail_price: product.retail_price || 0,
+    wholesale_shopkeeper_price: product.wholesale_shopkeeper_price || 0,
+    variation_name: product.variation_name || "",
   });
 
   // New Variety State
@@ -26,6 +29,7 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
     variation_name: "",
     retail_price: product.retail_price || 0,
     wholesale_shopkeeper_price: product.wholesale_shopkeeper_price || 0,
+    buy_price: product.buy_price || 0,
   });
 
   // Vendor searchable dropdown state
@@ -141,20 +145,28 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
           vendor_id: formData.vendor_id,
           buy_time: new Date().toISOString(),
           current_stock: 0, // Stock will be added via stock log right after
-          buy_price: formData.buy_price,
+          buy_price: newVarietyData.buy_price,
           wholesale_shopkeeper_price: newVarietyData.wholesale_shopkeeper_price,
           retail_price: newVarietyData.retail_price,
           variation_name: newVarietyData.variation_name.trim(),
           group_id: product.group_id || product.id, // Group them together
         });
         targetProductId = newProd.id;
+      } else {
+        // Update existing product prices and variation name
+        await updateProduct(targetProductId, {
+          retail_price: formData.retail_price,
+          wholesale_shopkeeper_price: formData.wholesale_shopkeeper_price,
+          variation_name: formData.variation_name.trim() || null,
+          // buy_price is already updated by addStockLog, but we can do it here too just in case
+        });
       }
 
       await addStockLog(
         targetProductId,
         formData.vendor_id,
         formData.quantity,
-        formData.buy_price
+        isNewVariety ? newVarietyData.buy_price : formData.buy_price
       );
       
       onSuccess();
@@ -238,7 +250,19 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
               className="w-full p-2.5 rounded-xl border border-purple-200 dark:border-purple-700/50 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Buy Price</label>
+              <input
+                type="number"
+                name="buy_price"
+                min="0"
+                step="0.01"
+                value={newVarietyData.buy_price}
+                onChange={handleVarietyChange}
+                className="w-full p-2.5 rounded-xl border border-purple-200 dark:border-purple-700/50 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm"
+              />
+            </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Wholesale Price</label>
               <input
@@ -464,6 +488,62 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
                 className="w-full p-3 pl-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Update Wholesale Price
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-semibold">
+                Rs.
+              </span>
+              <input
+                type="number"
+                name="wholesale_shopkeeper_price"
+                value={formData.wholesale_shopkeeper_price || ""}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                disabled={isNewVariety}
+                className="w-full p-3 pl-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Update Retail Price
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-semibold">
+                Rs.
+              </span>
+              <input
+                type="number"
+                name="retail_price"
+                value={formData.retail_price || ""}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                disabled={isNewVariety}
+                className="w-full p-3 pl-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50"
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2 col-span-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Update Variety Name (Optional)
+            </label>
+            <input
+              type="text"
+              name="variation_name"
+              value={formData.variation_name || ""}
+              onChange={handleChange}
+              disabled={isNewVariety}
+              placeholder="e.g. Normal Skin, 200ml"
+              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50"
+            />
           </div>
         </div>
       </div>
