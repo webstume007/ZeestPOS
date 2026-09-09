@@ -49,6 +49,10 @@ export default function POSPage() {
   const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
   const customerSearchRef = useRef<HTMLDivElement>(null);
 
+  const [checkoutCustomerQuery, setCheckoutCustomerQuery] = useState("");
+  const [isCheckoutCustomerOpen, setIsCheckoutCustomerOpen] = useState(false);
+  const checkoutCustomerRef = useRef<HTMLDivElement>(null);
+
   const [pricingTier, setPricingTier] = useState<PricingTier>("retail_price");
   const [cart, setCart] = useState<CartItem[]>([]);
 
@@ -172,6 +176,10 @@ export default function POSPage() {
 
   const filteredCustomers = customerSearchQuery.trim()
     ? customerFuse.current?.search(customerSearchQuery).map((r) => r.item) || []
+    : customers.slice(0, 8);
+
+  const filteredCheckoutCustomers = checkoutCustomerQuery.trim()
+    ? customerFuse.current?.search(checkoutCustomerQuery).map((r) => r.item) || []
     : customers.slice(0, 8);
 
   const categories = useMemo(() => {
@@ -380,6 +388,9 @@ const playBeep = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (customerSearchRef.current && !customerSearchRef.current.contains(event.target as Node)) {
         setIsCustomerSearchOpen(false);
+      }
+      if (checkoutCustomerRef.current && !checkoutCustomerRef.current.contains(event.target as Node)) {
+        setIsCheckoutCustomerOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -1020,21 +1031,58 @@ const playBeep = () => {
                   <div className="flex items-center gap-1.5 font-semibold mb-2">
                     <AlertTriangle className="w-4 h-4" /> Khata needs a customer
                   </div>
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      const found = customers.find((c) => c.id === e.target.value);
-                      if (found) handleSelectCustomer(found);
-                    }}
-                    className="w-full p-2 rounded-lg bg-white dark:bg-slate-800 border border-amber-300 text-slate-900 dark:text-white text-xs"
-                  >
-                    <option value="">Select customer…</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.full_name} ({c.whatsapp_number})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative w-full" ref={checkoutCustomerRef}>
+                    <input
+                      type="text"
+                      placeholder="Search customer by name or phone..."
+                      value={checkoutCustomerQuery}
+                      onChange={(e) => {
+                        setCheckoutCustomerQuery(e.target.value);
+                        setIsCheckoutCustomerOpen(true);
+                      }}
+                      onFocus={() => setIsCheckoutCustomerOpen(true)}
+                      className="w-full p-2 rounded-lg bg-white dark:bg-slate-800 border border-amber-300 text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    
+                    {isCheckoutCustomerOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-48 overflow-y-auto z-50 divide-y divide-slate-100 dark:divide-slate-700/50">
+                        {filteredCheckoutCustomers.length === 0 ? (
+                          <div className="p-2 text-center text-xs text-slate-400">No customers found</div>
+                        ) : (
+                          filteredCheckoutCustomers.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                handleSelectCustomer(c);
+                                setIsCheckoutCustomerOpen(false);
+                              }}
+                              className="w-full p-2 text-left hover:bg-amber-50 dark:hover:bg-slate-700 flex items-center justify-between text-xs"
+                            >
+                              <div className="min-w-0">
+                                <span className="font-semibold text-slate-900 dark:text-white">{c.full_name}</span>
+                                <span className="text-slate-400 ml-2">{c.whatsapp_number || ""}</span>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (checkoutCustomerQuery.trim()) {
+                              setNewCustomer(p => ({ ...p, full_name: checkoutCustomerQuery.trim() }));
+                            }
+                            setIsCreatingCustomer(true);
+                            setIsCheckoutCustomerOpen(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs text-blue-600 dark:text-blue-400 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 flex items-center gap-2 bg-slate-50/50 dark:bg-slate-900/40"
+                        >
+                          <Plus className="w-3.5 h-3.5 shrink-0" />
+                          <span>+ Add New Customer {checkoutCustomerQuery.trim() ? `"${checkoutCustomerQuery.trim()}"` : ""}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               <div>
