@@ -27,6 +27,8 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
   const [isNewVariety, setIsNewVariety] = useState(false);
   const [newVarietyData, setNewVarietyData] = useState({
     variation_name: "",
+    barcode: "",
+    quantity: 0,
     retail_price: product.retail_price || 0,
     wholesale_shopkeeper_price: product.wholesale_shopkeeper_price || 0,
     buy_price: product.buy_price || 0,
@@ -126,7 +128,10 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
       alert("Please select or add a vendor.");
       return;
     }
-    if (formData.quantity <= 0) {
+    
+    const quantityToAdd = isNewVariety ? newVarietyData.quantity : formData.quantity;
+    
+    if (quantityToAdd <= 0) {
       alert("Please enter a valid quantity greater than 0.");
       return;
     }
@@ -149,6 +154,7 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
           wholesale_shopkeeper_price: newVarietyData.wholesale_shopkeeper_price,
           retail_price: newVarietyData.retail_price,
           variation_name: newVarietyData.variation_name.trim(),
+          barcode: newVarietyData.barcode?.trim() || null,
           group_id: product.group_id || product.id, // Group them together
         });
         targetProductId = newProd.id;
@@ -165,7 +171,7 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
       await addStockLog(
         targetProductId,
         formData.vendor_id,
-        formData.quantity,
+        quantityToAdd,
         isNewVariety ? newVarietyData.buy_price : formData.buy_price
       );
       
@@ -236,21 +242,48 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
               This will create a new variation of this product and add the stock to it instead.
             </p>
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Variety Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="variation_name"
-              placeholder="e.g. Normal Skin, 200ml"
-              value={newVarietyData.variation_name}
-              onChange={handleVarietyChange}
-              required
-              className="w-full p-2.5 rounded-xl border border-purple-200 dark:border-purple-700/50 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Variety Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="variation_name"
+                placeholder="e.g. Normal Skin, 200ml"
+                value={newVarietyData.variation_name}
+                onChange={handleVarietyChange}
+                required
+                className="w-full p-2.5 rounded-xl border border-purple-200 dark:border-purple-700/50 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Barcode
+              </label>
+              <input
+                type="text"
+                name="barcode"
+                placeholder="e.g. 123456789"
+                value={newVarietyData.barcode || ""}
+                onChange={handleVarietyChange}
+                className="w-full p-2.5 rounded-xl border border-purple-200 dark:border-purple-700/50 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm"
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Quantity Added <span className="text-red-500">*</span></label>
+              <input
+                type="number"
+                name="quantity"
+                min="1"
+                required
+                value={newVarietyData.quantity || ""}
+                onChange={handleVarietyChange}
+                className="w-full p-2.5 rounded-xl border border-purple-200 dark:border-purple-700/50 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm"
+              />
+            </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Buy Price</label>
               <input
@@ -447,6 +480,7 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
         </div>
 
         {/* Quantity & Buy Price */}
+        {!isNewVariety && (
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -544,8 +578,8 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
               placeholder="e.g. Normal Skin, 200ml"
               className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50"
             />
-          </div>
         </div>
+        )}
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -559,7 +593,12 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
         </button>
         <button
           type="submit"
-          disabled={loading || !formData.vendor_id || formData.quantity <= 0 || (isNewVariety && !newVarietyData.variation_name.trim())}
+          disabled={
+            loading || 
+            !formData.vendor_id || 
+            (isNewVariety ? newVarietyData.quantity <= 0 : formData.quantity <= 0) || 
+            (isNewVariety && !newVarietyData.variation_name.trim())
+          }
           className="px-6 py-2.5 rounded-xl font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm flex items-center gap-2"
         >
           {loading ? "Saving Stock..." : isNewVariety ? "Add Variety & Stock" : "Confirm & Add Stock"}

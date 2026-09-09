@@ -547,6 +547,35 @@ export async function updateProduct(id: string, product: Partial<Product>): Prom
     return rows[0];
 }
 
+export async function updateProductGroupBase(groupId: string, baseData: Partial<Product>): Promise<void> {
+    const setKeys = [];
+    const params = [];
+    let paramIndex = 1;
+
+    // Only allow updating these base fields across the entire group
+    const allowedKeys = ['name_en', 'name_ur', 'category', 'unit', 'vendor_id', 'updated_at'];
+
+    for (const [key, value] of Object.entries(baseData)) {
+        if (allowedKeys.includes(key)) {
+            setKeys.push(`${key} = $${paramIndex}`);
+            params.push(value);
+            paramIndex++;
+        }
+    }
+
+    if (setKeys.length === 0) return;
+
+    params.push(groupId);
+    const sql = `
+        UPDATE products 
+        SET ${setKeys.join(', ')}
+        WHERE group_id = $${paramIndex}
+    `;
+    
+    await query(sql, params);
+    clearCache('all_products');
+}
+
 export async function deleteProduct(id: string): Promise<void> {
     await query('UPDATE products SET is_deleted = TRUE, updated_at = NOW() WHERE id = $1', [id]);
     clearCache('all_products');

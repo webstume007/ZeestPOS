@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Product, createProduct, updateProduct, deleteProduct, getSetting, getVendors, createVendor, Vendor } from "@/lib/db";
+import { Product, createProduct, updateProduct, updateProductGroupBase, deleteProduct, getSetting, getVendors, createVendor, Vendor } from "@/lib/db";
 import { Plus, Search, Check, ChevronDown, UserPlus, X, Store, Trash2, Camera, Settings } from "lucide-react";
 import { BarcodeScanner } from "@/components/ui/BarcodeScanner";
 import { Modal } from "@/components/ui/Modal";
@@ -162,8 +162,15 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
         const hasNewVariations = variations.length > 0;
         const groupId = hasNewVariations ? (initialData.group_id || crypto.randomUUID()) : initialData.group_id;
         
+        if (groupId) {
+          await updateProductGroupBase(groupId, {
+            ...basePayload,
+            updated_at: new Date().toISOString(),
+          });
+        }
+        
         await updateProduct(initialData.id, {
-          ...basePayload,
+          ...(groupId ? {} : basePayload), // Only apply base payload if no group_id, otherwise updateProductGroupBase handled it
           current_stock: formData.current_stock,
           buy_price: formData.buy_price,
           wholesale_shopkeeper_price: formData.wholesale_shopkeeper_price,
@@ -605,8 +612,8 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
                       <X className="w-4 h-4" />
                     </button>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-6 gap-3 mt-2 pr-6">
-                      <div className="md:col-span-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-2 pr-6">
+                      <div className="sm:col-span-2 md:col-span-1">
                         <label className="text-xs font-medium text-slate-500 mb-1 block">Variety Name</label>
                         <input
                           type="text"
@@ -617,7 +624,7 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
                           className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
-                      <div>
+                      <div className="sm:col-span-2 md:col-span-1">
                         <label className="text-xs font-medium text-slate-500 mb-1 block">Barcode</label>
                         <div className="flex items-center gap-1">
                           <input
