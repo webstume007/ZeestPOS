@@ -232,10 +232,35 @@ export default function POSPage() {
     focusSearch();
   }, []);
 
+const playBeep = () => {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    
+    gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
+    
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
+  } catch (e) {
+    console.error('Failed to play beep:', e);
+  }
+};
+
   const handleBarcodeScan = useCallback((decodedText: string) => {
     setIsScannerOpen(false);
     const product = products.find(p => p.barcode === decodedText);
     if (product) {
+      playBeep();
       handleProductSelect(product);
       showToast("Scanned: " + (product.name_en || product.barcode));
     } else {

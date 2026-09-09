@@ -20,6 +20,7 @@ interface VariationInput {
   buy_price: string;
   wholesale_shopkeeper_price: string;
   retail_price: string;
+  barcode: string;
 }
 
 export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormProps) {
@@ -39,7 +40,7 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
     has_no_barcode: initialData?.has_no_barcode || false,
   });
 
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannerTarget, setScannerTarget] = useState<string | null>(null);
 
   const [variations, setVariations] = useState<VariationInput[]>([]);
 
@@ -158,6 +159,9 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
 
       if (initialData?.id) {
         // Editing single product
+        const hasNewVariations = variations.length > 0;
+        const groupId = hasNewVariations ? (initialData.group_id || crypto.randomUUID()) : initialData.group_id;
+        
         await updateProduct(initialData.id, {
           ...basePayload,
           current_stock: formData.current_stock,
@@ -167,11 +171,40 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
           variation_name: formData.variation_name || null,
           barcode: formData.barcode || null,
           has_no_barcode: formData.has_no_barcode,
+          group_id: groupId || null,
         });
+
+        if (hasNewVariations) {
+          for (const v of variations) {
+            await createProduct({
+              ...basePayload,
+              variation_name: v.variation_name || null,
+              group_id: groupId,
+              current_stock: v.current_stock,
+              buy_price: v.buy_price !== "" ? Number(v.buy_price) : formData.buy_price,
+              wholesale_shopkeeper_price: v.wholesale_shopkeeper_price !== "" ? Number(v.wholesale_shopkeeper_price) : formData.wholesale_shopkeeper_price,
+              retail_price: v.retail_price !== "" ? Number(v.retail_price) : formData.retail_price,
+              barcode: v.barcode || null,
+            });
+          }
+        }
       } else {
         // Creating new product(s)
         const groupId = crypto.randomUUID();
         
+        // Always create the main product
+        await createProduct({
+          ...basePayload,
+          current_stock: formData.current_stock,
+          buy_price: formData.buy_price,
+          wholesale_shopkeeper_price: formData.wholesale_shopkeeper_price,
+          retail_price: formData.retail_price,
+          variation_name: formData.variation_name || null,
+          barcode: formData.barcode || null,
+          has_no_barcode: formData.has_no_barcode,
+          group_id: groupId,
+        });
+
         if (variations.length > 0) {
           // Create a product for each variation
           for (const v of variations) {
@@ -183,21 +216,9 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
               buy_price: v.buy_price !== "" ? Number(v.buy_price) : formData.buy_price,
               wholesale_shopkeeper_price: v.wholesale_shopkeeper_price !== "" ? Number(v.wholesale_shopkeeper_price) : formData.wholesale_shopkeeper_price,
               retail_price: v.retail_price !== "" ? Number(v.retail_price) : formData.retail_price,
+              barcode: v.barcode || null,
             });
           }
-        } else {
-          // Normal single creation
-          await createProduct({
-            ...basePayload,
-            current_stock: formData.current_stock,
-            buy_price: formData.buy_price,
-            wholesale_shopkeeper_price: formData.wholesale_shopkeeper_price,
-            retail_price: formData.retail_price,
-            variation_name: formData.variation_name || null,
-            barcode: formData.barcode || null,
-            has_no_barcode: formData.has_no_barcode,
-            group_id: groupId,
-          });
         }
       }
       onSuccess();
@@ -241,7 +262,7 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
   const addVariation = () => {
     setVariations(prev => [
       ...prev,
-      { id: crypto.randomUUID(), variation_name: "", current_stock: 0, buy_price: "", wholesale_shopkeeper_price: "", retail_price: "" }
+      { id: crypto.randomUUID(), variation_name: "", current_stock: 0, buy_price: "", wholesale_shopkeeper_price: "", retail_price: "", barcode: "" }
     ]);
   };
 
@@ -478,7 +499,7 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
             />
             <button
               type="button"
-              onClick={() => setIsScannerOpen(true)}
+              onClick={() => setScannerTarget('main')}
               className="px-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
               title="Scan Barcode"
             >
@@ -532,62 +553,46 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
         </div>
       </div>
 
-      {/* Basic Stock Section (only if no variations) */}
-      {variations.length === 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              {initialData ? "Current Stock (Edit)" : "Initial Stock"}
-            </label>
-            <input
-              type="number"
-              name="current_stock"
-              value={formData.current_stock}
-              onChange={handleChange}
-              required
-              min="0"
-              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-            />
-          </div>
-          {initialData?.id && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Variation Name (Optional)</label>
-              <input
-                type="text"
-                name="variation_name"
-                value={formData.variation_name}
-                onChange={handleChange}
-                placeholder="e.g. Dry Skin, 100ml"
-                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              />
-            </div>
-          )}
+      {/* Basic Stock Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            {initialData ? "Current Stock (Edit)" : "Initial Stock"}
+          </label>
+          <input
+            type="number"
+            name="current_stock"
+            value={formData.current_stock}
+            onChange={handleChange}
+            required
+            min="0"
+            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+          />
         </div>
-      )}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Variation Name (Optional)</label>
+          <input
+            type="text"
+            name="variation_name"
+            value={formData.variation_name}
+            onChange={handleChange}
+            placeholder="e.g. Dry Skin, 100ml"
+            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+          />
+        </div>
+      </div>
 
-      {/* Variations Section - Only for new products */}
-      {!initialData?.id && (
-        <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
-          <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
-            <div>
-              <h3 className="font-semibold text-slate-900 dark:text-white">Product Variations</h3>
-              <p className="text-xs text-slate-500">Add variations like Dry Skin, Normal Skin. Leave pricing empty to use main product prices.</p>
-            </div>
+      {/* Variations Section */}
+      <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+          <div>
+            <h3 className="font-semibold text-slate-900 dark:text-white">Product Variations</h3>
+            <p className="text-xs text-slate-500">Add variations like Dry Skin, Normal Skin. Leave pricing empty to use main product prices.</p>
           </div>
+        </div>
 
-          {variations.length > 0 && (
-            <div className="space-y-4">
-              <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block">Main Product Variety Name (Optional)</label>
-                <input
-                  type="text"
-                  name="variation_name"
-                  value={formData.variation_name}
-                  onChange={handleChange}
-                  placeholder="e.g. Original"
-                  className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+        {variations.length > 0 && (
+          <div className="space-y-4">
 
               <div className="space-y-3">
                 {variations.map((v) => (
@@ -600,7 +605,7 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
                       <X className="w-4 h-4" />
                     </button>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-2 pr-6">
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-3 mt-2 pr-6">
                       <div className="md:col-span-1">
                         <label className="text-xs font-medium text-slate-500 mb-1 block">Variety Name</label>
                         <input
@@ -611,6 +616,26 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
                           onChange={(e) => updateVariation(v.id, "variation_name", e.target.value)}
                           className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
                         />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 mb-1 block">Barcode</label>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            placeholder="Barcode"
+                            value={v.barcode || ""}
+                            onChange={(e) => updateVariation(v.id, "barcode", e.target.value)}
+                            className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setScannerTarget(v.id)}
+                            className="p-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
+                            title="Scan Barcode"
+                          >
+                            <Camera className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                       <div>
                         <label className="text-xs font-medium text-slate-500 mb-1 block">Initial Stock</label>
@@ -666,15 +691,14 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={addVariation}
-            className="w-full mt-4 py-3 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all flex items-center justify-center gap-2"
-          >
-            <Plus className="w-5 h-5" /> Add New Variation
-          </button>
-        </div>
-      )}
+        <button
+          type="button"
+          onClick={addVariation}
+          className="w-full mt-4 py-3 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all flex items-center justify-center gap-2"
+        >
+          <Plus className="w-5 h-5" /> Add New Variation
+        </button>
+      </div>
 
       <div className="flex justify-between items-center pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
         <div>
@@ -708,13 +732,17 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
       </div>
     </form>
 
-    {isScannerOpen && (
+    {scannerTarget && (
       <BarcodeScanner
         onScan={(decodedText) => {
-          setFormData(prev => ({ ...prev, barcode: decodedText }));
-          setIsScannerOpen(false);
+          if (scannerTarget === 'main') {
+            setFormData(prev => ({ ...prev, barcode: decodedText }));
+          } else {
+            updateVariation(scannerTarget, 'barcode', decodedText);
+          }
+          setScannerTarget(null);
         }}
-        onClose={() => setIsScannerOpen(false)}
+        onClose={() => setScannerTarget(null)}
       />
     )}
 
