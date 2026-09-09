@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import html2canvas from "html2canvas";
-import { Share2, Printer } from "lucide-react";
+import { Share2, Printer, Download } from "lucide-react";
 import { Sale } from "@/lib/db";
 import { format } from "date-fns";
 
@@ -28,22 +28,48 @@ export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
         const file = new File([blob], `${sale.invoice_number || "invoice"}.png`, { type: "image/png" });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: `Invoice ${sale.invoice_number}`,
-            text: `Invoice ${sale.invoice_number} from BajwaStore.`,
-          });
+          try {
+            await navigator.share({
+              files: [file],
+              title: `Invoice ${sale.invoice_number}`,
+              text: `Invoice ${sale.invoice_number} from BajwaStore.`,
+            });
+          } catch (e) {
+            console.error("Native share cancelled or failed", e);
+          }
         } else {
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
           a.download = `${sale.invoice_number || "invoice"}.png`;
+          document.body.appendChild(a);
           a.click();
+          document.body.removeChild(a);
           URL.revokeObjectURL(url);
         }
       }, "image/png");
     } catch (err) {
       console.error("Failed to generate or share invoice", err);
+    }
+  };
+
+  const downloadImage = async () => {
+    if (!receiptRef.current) return;
+    try {
+      const canvas = await html2canvas(receiptRef.current, { scale: 2 });
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${sale.invoice_number || "invoice"}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, "image/png");
+    } catch (err) {
+      console.error("Failed to download image", err);
     }
   };
 
@@ -87,7 +113,9 @@ export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
           const a = document.createElement("a");
           a.href = url;
           a.download = `${sale.invoice_number || "invoice"}.png`;
+          document.body.appendChild(a);
           a.click();
+          document.body.removeChild(a);
           URL.revokeObjectURL(url);
           newWindow.location.href = "https://api.whatsapp.com/send";
         }
@@ -181,6 +209,13 @@ export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
         </button>
         <button
           type="button"
+          onClick={downloadImage}
+          className="py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 text-sm"
+        >
+          <Download className="w-4 h-4" /> Download
+        </button>
+        <button
+          type="button"
           onClick={sendToWhatsAppWeb}
           className="py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-sm"
         >
@@ -190,7 +225,7 @@ export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
           <button
             type="button"
             onClick={onDone}
-            className="py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm"
+            className="py-2.5 col-span-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm"
           >
             Done
           </button>

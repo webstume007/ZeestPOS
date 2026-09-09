@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { Sale, getSales, getSaleItems, processSaleReturn } from "@/lib/db";
-import { History, Search, FileText, Calendar, DollarSign, Clock, CheckCircle2, AlertCircle, Eye, CornerUpLeft, X, User } from "lucide-react";
+import { History, Search, FileText, Calendar, DollarSign, Clock, CheckCircle2, AlertCircle, Eye, CornerUpLeft, X, User, TrendingUp, Package, Banknote, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { Modal } from "@/components/ui/Modal";
 import { InvoiceReceipt } from "@/components/pos/InvoiceReceipt";
@@ -218,39 +218,69 @@ export default function SalesHistory() {
 
         {/* Dashboard Metric Cards */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Invoices</div>
-            <div className="text-xl font-bold text-slate-900 dark:text-white mt-1">
+          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Invoices</div>
+              <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-500">
+                <FileText className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-slate-900 dark:text-white mt-2">
               {filteredSales.length}
             </div>
           </div>
-          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Sales</div>
-            <div className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">
+          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Sales</div>
+              <div className="p-1.5 bg-amber-50 dark:bg-amber-900/20 rounded-xl text-amber-500">
+                <DollarSign className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-2">
               Rs {totalAmount.toFixed(0)}
             </div>
           </div>
-          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Profit</div>
-            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Profit</div>
+              <div className="p-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl text-emerald-500">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
               Rs {totalProfit.toFixed(0)}
             </div>
           </div>
-          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Items Sold</div>
-            <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1">
+          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Items Sold</div>
+              <div className="p-1.5 bg-purple-50 dark:bg-purple-900/20 rounded-xl text-purple-500">
+                <Package className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-2">
               {totalItemsSold}
             </div>
           </div>
-          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cash</div>
-            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cash</div>
+              <div className="p-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl text-emerald-500">
+                <Banknote className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
               Rs {totalPaid.toFixed(0)}
             </div>
           </div>
-          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Khata</div>
-            <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Khata</div>
+              <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl text-indigo-500">
+                <CreditCard className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-2">
               Rs {totalKhata.toFixed(0)}
             </div>
           </div>
@@ -259,7 +289,7 @@ export default function SalesHistory() {
         {/* Transactions Table */}
         <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[700px]">
+            <table className="hidden md:table w-full text-left min-w-[700px]">
               <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
                 <tr>
                   <th className="px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Invoice</th>
@@ -346,6 +376,74 @@ export default function SalesHistory() {
                 )}
               </tbody>
             </table>
+            
+            {/* Mobile Card List */}
+            <div className="md:hidden flex flex-col p-3 gap-3">
+              {loading ? (
+                <div className="p-12 text-center text-slate-500">Loading sales history...</div>
+              ) : paginatedSales.length === 0 ? (
+                <div className="p-12 text-center text-slate-500 flex flex-col items-center">
+                  <FileText className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-3" />
+                  <p className="font-medium">No sales records found.</p>
+                </div>
+              ) : (
+                paginatedSales.map((sale) => (
+                  <div key={sale.invoice_id} className="p-4 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex flex-col gap-3 rounded-2xl border border-slate-100 dark:border-slate-800 relative shadow-sm">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1">
+                        <div className="font-mono text-sm font-bold text-slate-900 dark:text-slate-100">
+                          {sale.invoice_number || `${sale.invoice_id.split("-")[0]}`}
+                        </div>
+                        <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-1">
+                          {sale.customer_name || "Walk-in Customer"}
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1"><User className="w-3 h-3" /> {sale.cashier_id || "Admin"}</div>
+                      </div>
+                      <div className="flex flex-col items-end shrink-0">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          sale.payment_status === "paid" 
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" 
+                            : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400"
+                        }`}>
+                          {sale.payment_status === "paid" ? "Paid" : "Khata"}
+                        </span>
+                        <div className="text-[10px] text-slate-400 mt-2 text-right">
+                          {sale.timestamp ? format(new Date(sale.timestamp), "MMM d, yyyy h:mm a") : "Unknown"}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-800/30 p-2.5 rounded-xl text-xs">
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-400 mb-0.5">Total</p>
+                        <p className="font-bold text-slate-700 dark:text-slate-300">Rs {Number(sale.total_amount).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-400 mb-0.5">Profit</p>
+                        <p className="font-bold text-emerald-600 dark:text-emerald-400">Rs {Number(sale.profit || 0).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-400 mb-0.5">Items Sold</p>
+                        <p className="font-medium text-slate-700 dark:text-slate-300">{sale.products_sold || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-400 mb-0.5">Paid</p>
+                        <p className="font-medium text-indigo-600 dark:text-indigo-400">Rs {Number(sale.amount_paid).toFixed(0)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2 mt-1 border-t border-slate-100 dark:border-slate-700/50">
+                      <button onClick={() => handleViewInvoice(sale)} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg text-xs font-medium transition-colors">
+                        <Eye className="w-3.5 h-3.5" /> View
+                      </button>
+                      <button onClick={() => handleOpenReturn(sale)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg text-xs font-medium transition-colors">
+                        <CornerUpLeft className="w-3.5 h-3.5" /> Return
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
           
           {/* Pagination Controls */}
