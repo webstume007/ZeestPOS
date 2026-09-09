@@ -161,6 +161,15 @@ export default function POSPage() {
     setSelectedSearchIndex(0);
   }, [searchQuery, products]);
 
+  useEffect(() => {
+    if (selectedSearchIndex >= 0 && searchResults.length > 0) {
+      const el = document.getElementById(`search-result-${selectedSearchIndex}`);
+      if (el) {
+        el.scrollIntoView({ block: "nearest" });
+      }
+    }
+  }, [selectedSearchIndex, searchResults]);
+
   const filteredCustomers = customerSearchQuery.trim()
     ? customerFuse.current?.search(customerSearchQuery).map((r) => r.item) || []
     : customers.slice(0, 8);
@@ -672,6 +681,7 @@ export default function POSPage() {
                     return (
                       <button
                         key={product.id}
+                        id={`search-result-${idx}`}
                         type="button"
                         onClick={() => handleProductSelect(product)}
                         onMouseEnter={() => setSelectedSearchIndex(idx)}

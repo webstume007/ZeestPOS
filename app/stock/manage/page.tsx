@@ -38,6 +38,7 @@ export default function StockManagement() {
   const [isDamageModalOpen, setIsDamageModalOpen] = useState(false);
   const [damageProduct, setDamageProduct] = useState<Product | undefined>();
   const [loading, setLoading] = useState(true);
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
 
   const { user } = useAuth();
 
@@ -248,16 +249,10 @@ export default function StockManagement() {
             </div>
           ) : (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm flex-1 overflow-hidden flex flex-col">
-          <div className="p-4 px-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              Found {filteredProducts.length} product{filteredProducts.length === 1 ? "" : "s"} matching &ldquo;{searchQuery}&rdquo;
+          <div className="p-2 border-b border-slate-100 dark:border-slate-800 flex justify-center items-center bg-slate-50/50 dark:bg-slate-800/30">
+            <span className="px-4 py-1 bg-slate-200/50 dark:bg-slate-700/50 rounded-full text-xs font-medium text-slate-600 dark:text-slate-300">
+              Found {filteredProducts.length} product{filteredProducts.length === 1 ? "" : "s"}
             </span>
-            <button
-              onClick={() => handleOpenProductModal({ name_en: searchQuery })}
-              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-            >
-              <Plus className="w-3.5 h-3.5" /> + Add New Product with this name
-            </button>
           </div>
 
           <div className="overflow-x-auto flex-1">
@@ -342,7 +337,7 @@ export default function StockManagement() {
             </table>
 
             {/* Mobile Card List */}
-            <div className="md:hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="md:hidden flex flex-col p-3 gap-3">
               {filteredProducts.length === 0 ? (
                 <div className="p-12 text-center text-slate-500">
                   No products found matching &ldquo;{searchQuery}&rdquo;.
@@ -353,11 +348,16 @@ export default function StockManagement() {
                   const retailPrice = Number(product.retail_price) || 0;
                   const unitProfit = retailPrice - buyPrice;
                   const stock = Number(product.current_stock) || 0;
+                  const isExpanded = expandedProductId === product.id;
 
                   return (
-                    <div key={product.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors flex flex-col gap-3">
+                    <div 
+                      key={product.id} 
+                      onClick={() => setExpandedProductId(isExpanded ? null : product.id)}
+                      className="p-4 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex flex-col gap-3 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer relative shadow-sm"
+                    >
                       <div className="flex justify-between items-start gap-2">
-                        <div>
+                        <div className="flex-1">
                           <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{product.name_en}{product.variation_name ? ` - ${product.variation_name}` : ""}</h3>
                           {product.name_ur && (
                             <p className="font-urdu text-sm text-slate-600 dark:text-slate-400 mt-1">{product.name_ur}{product.variation_name ? ` - ${product.variation_name}` : ""}</p>
@@ -369,7 +369,7 @@ export default function StockManagement() {
                             <span className="text-xs text-slate-400">Unit: {product.unit || "pcs"}</span>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end">
+                        <div className="flex flex-col items-end shrink-0">
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
                             stock > 0
                               ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
@@ -391,23 +391,33 @@ export default function StockManagement() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 pt-1 overflow-x-auto pb-1 no-scrollbar">
-                        <button onClick={() => handleOpenStockModal(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
-                          <ArrowUpCircle className="w-3.5 h-3.5" /> Stock
-                        </button>
-                        <button onClick={() => handleOpenDamageModal(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
-                          <AlertTriangle className="w-3.5 h-3.5" /> Loss
-                        </button>
-                        <button onClick={() => handleOpenProductModal(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
-                          <Edit2 className="w-3.5 h-3.5" /> Edit
-                        </button>
-                        <button onClick={() => handleCloneProduct(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
-                          <Copy className="w-3.5 h-3.5" /> Clone
-                        </button>
-                        <button onClick={() => handleOpenHistoryModal(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
-                          <History className="w-3.5 h-3.5" /> Logs
-                        </button>
-                      </div>
+                      {/* Nano down arrow */}
+                      {!isExpanded && (
+                        <div className="absolute bottom-2 right-2 text-slate-300 dark:text-slate-600">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      {isExpanded && (
+                        <div className="flex items-center gap-1.5 pt-2 mt-1 border-t border-slate-100 dark:border-slate-700/50 overflow-x-auto pb-1 no-scrollbar animate-in fade-in slide-in-from-top-1 duration-200" onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => handleOpenStockModal(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
+                            <ArrowUpCircle className="w-3.5 h-3.5" /> Stock
+                          </button>
+                          <button onClick={() => handleOpenDamageModal(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
+                            <AlertTriangle className="w-3.5 h-3.5" /> Loss
+                          </button>
+                          <button onClick={() => handleOpenProductModal(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
+                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button onClick={() => handleCloneProduct(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
+                            <Copy className="w-3.5 h-3.5" /> Clone
+                          </button>
+                          <button onClick={() => handleOpenHistoryModal(product)} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
+                            <History className="w-3.5 h-3.5" /> Logs
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })
