@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Product, createProduct, updateProduct, deleteProduct, getSetting, getVendors, createVendor, Vendor } from "@/lib/db";
-import { Plus, Search, Check, ChevronDown, UserPlus, X, Store, Trash2, Camera } from "lucide-react";
+import { Plus, Search, Check, ChevronDown, UserPlus, X, Store, Trash2, Camera, Settings } from "lucide-react";
 import { BarcodeScanner } from "@/components/ui/BarcodeScanner";
+import { Modal } from "@/components/ui/Modal";
+import { CategoryManager } from "@/components/stock/CategoryManager";
 
 interface ProductFormProps {
   initialData?: Partial<Product> & { id?: string };
@@ -59,13 +61,23 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
   });
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+
+  const fetchCategories = async () => {
+    try {
+      const defaultCategories = ["Plastic", "Creams", "Lotions", "Hair Colors", "Elastic", "Toys", "General"];
+      const catsJson = await getSetting("product_categories", JSON.stringify(defaultCategories));
+      const parsedCats = JSON.parse(catsJson);
+      setCategories(parsedCats);
+    } catch (err) {
+      console.error("Failed to fetch categories:", err);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
+      await fetchCategories();
       try {
-        const defaultCategories = ["Plastic", "Creams", "Lotions", "Hair Colors", "Elastic", "Toys", "General"];
-        const catsJson = await getSetting("product_categories", JSON.stringify(defaultCategories));
-        setCategories(JSON.parse(catsJson));
 
         const vends = await getVendors();
         setVendors(vends);
@@ -285,6 +297,13 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={() => setIsCategoryModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mt-1 transition-colors"
+          >
+            <Settings className="w-3.5 h-3.5" /> Manage Categories
+          </button>
         </div>
 
         <div className="space-y-2">
@@ -697,6 +716,20 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
         }}
         onClose={() => setIsScannerOpen(false)}
       />
+    )}
+
+    {/* Categories Manager Modal */}
+    {isCategoryModalOpen && (
+      <Modal 
+        isOpen={isCategoryModalOpen} 
+        onClose={() => {
+          setIsCategoryModalOpen(false);
+          fetchCategories();
+        }} 
+        title="Manage Categories"
+      >
+        <CategoryManager />
+      </Modal>
     )}
   </>
 );

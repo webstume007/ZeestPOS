@@ -3,6 +3,7 @@ import { query, setSyncEventsSuppressed } from './db';
 
 // Sync table configuration: order matters (parents before children for push)
 const PUSH_ORDER = [
+  'settings',
   'users', 
   'vendors', 
   'customers', 
@@ -19,6 +20,7 @@ const PULL_ORDER = PUSH_ORDER;
 
 // Known columns per local PGlite table (prevents crashes from unknown Supabase columns)
 const LOCAL_COLUMNS: Record<string, string[]> = {
+  settings: ['key', 'value', 'updated_at'],
   users: ['id', 'username', 'cnic', 'pin', 'role', 'updated_at'],
   vendors: ['id', 'name', 'representative_name', 'contact', 'address', 'updated_at'],
   customers: ['id', 'full_name', 'whatsapp_number', 'address', 'customer_type', 'total_credit_balance', 'updated_at'],
@@ -32,6 +34,7 @@ const LOCAL_COLUMNS: Record<string, string[]> = {
 
 // Primary key per table
 const PRIMARY_KEYS: Record<string, string> = {
+  settings: 'key',
   users: 'id',
   vendors: 'id',
   customers: 'id',
