@@ -16,6 +16,7 @@ export interface Product {
     group_id?: string | null;
     barcode?: string | null;
     has_no_barcode?: boolean | null;
+    updated_at?: string | null;
 }
 
 export interface Vendor {
