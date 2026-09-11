@@ -41,12 +41,13 @@ export interface StockLog {
 
 export interface Customer {
     id: string;
-    full_name: string | null;
-    whatsapp_number: string | null;
-    address: string | null;
-    total_credit_balance: number | null;
-    customer_type: string | null;
-    is_deleted?: boolean | null;
+    full_name: string;
+    whatsapp_number: string;
+    address: string;
+    customer_type: string;
+    total_credit_balance: number;
+    is_deleted?: boolean;
+    updated_at?: string;
 }
 
 export interface CustomerTransaction {
@@ -966,7 +967,7 @@ export async function processSaleReturn(
                 WHERE id = $2
                 RETURNING total_credit_balance
             `, [refundToKhata, originalSale.customer_id]);
-            const newBalance = updatedCustomerRes.rows[0]?.total_credit_balance || 0;
+            const newBalance = updatedCustomerRes[0]?.total_credit_balance || 0;
             
             await query(`
                 INSERT INTO customer_transactions (id, customer_id, type, amount, balance_after, description, created_by, timestamp)
@@ -1009,9 +1010,9 @@ export async function getSettings(): Promise<Record<string, string>> {
     return settings;
 }
 
-export async function getSetting(key: string): Promise<string | null> {
+export async function getSetting(key: string, defaultValue: string = ""): Promise<string> {
     const rows = await query<{ value: string }>('SELECT value FROM settings WHERE key = $1', [key]);
-    return rows[0]?.value || null;
+    return rows[0]?.value || defaultValue;
 }
 
 export async function setSetting(key: string, value: string): Promise<void> {

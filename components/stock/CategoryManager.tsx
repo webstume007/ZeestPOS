@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSetting, updateSetting } from "@/lib/db";
+import { getSetting, setSetting } from "@/lib/db";
 import { Plus, Trash2 } from "lucide-react";
 
 export function CategoryManager() {
@@ -32,13 +32,13 @@ export function CategoryManager() {
     setCategories(updated);
     setNewCategory("");
     
-    await updateSetting("product_categories", JSON.stringify(updated));
+    await setSetting("product_categories", JSON.stringify(updated));
   };
 
   const handleRemoveCategory = async (index: number) => {
     const updated = categories.filter((_, i) => i !== index);
     setCategories(updated);
-    await updateSetting("product_categories", JSON.stringify(updated));
+    await setSetting("product_categories", JSON.stringify(updated));
   };
 
   if (loading) return <div className="p-4 text-center text-slate-500">Loading categories...</div>;
