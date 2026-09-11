@@ -53,8 +53,8 @@ export default function Dashboard() {
           <div className="p-2 md:p-2.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
             <DollarSign className="w-5 h-5" />
           </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500 mb-0.5">Today's Sales</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-slate-500 mb-0.5 truncate">Today's Sales</p>
             <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">Rs {stats?.todaySales.toLocaleString() || "0"}</p>
           </div>
         </div>
@@ -63,8 +63,8 @@ export default function Dashboard() {
           <div className="p-2 md:p-2.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
             <TrendingUp className="w-5 h-5" />
           </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500 mb-0.5">Today's Profit</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-slate-500 mb-0.5 truncate">Today's Profit</p>
             <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">Rs {stats?.todayProfit.toLocaleString() || "0"}</p>
           </div>
         </div>
@@ -73,8 +73,8 @@ export default function Dashboard() {
           <div className="p-2 md:p-2.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl shrink-0">
             <Package className="w-5 h-5" />
           </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500 mb-0.5">Items in Stock</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-slate-500 mb-0.5 truncate">Items in Stock</p>
             <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">{stats?.availableStockSum.toLocaleString() || "0"}</p>
           </div>
         </div>
@@ -83,8 +83,8 @@ export default function Dashboard() {
           <div className="p-2 md:p-2.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0">
             <Box className="w-5 h-5" />
           </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500 mb-0.5">Inventory Value</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-slate-500 mb-0.5 truncate">Inventory Value</p>
             <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">Rs {stats?.inventoryValuation.toLocaleString() || "0"}</p>
           </div>
         </div>
@@ -93,8 +93,8 @@ export default function Dashboard() {
           <div className="p-2 md:p-2.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl shrink-0">
             <ShoppingCart className="w-5 h-5" />
           </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500 mb-0.5">Low Stock Items</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-slate-500 mb-0.5 truncate">Low Stock Items</p>
             <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">{stats?.lowStockCount.toLocaleString() || "0"}</p>
           </div>
         </div>
@@ -103,8 +103,8 @@ export default function Dashboard() {
           <div className="p-2 md:p-2.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl shrink-0">
             <Users className="w-5 h-5" />
           </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500 mb-0.5">Total Khata</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-slate-500 mb-0.5 truncate">Total Khata</p>
             <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">Rs {stats?.totalKhataOutstanding.toLocaleString() || "0"}</p>
           </div>
         </div>

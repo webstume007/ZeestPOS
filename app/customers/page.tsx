@@ -18,7 +18,7 @@ export default function CustomerDirectory() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(20);
 
-  const [sortBy, setSortBy] = useState<"A-Z" | "High to Low Balance" | "Oldest to Newest">("A-Z");
+  const [sortBy, setSortBy] = useState<"A-Z" | "Z-A" | "High to Low Balance" | "Low to High Balance" | "Oldest to Newest" | "Newest to Oldest">("A-Z");
 
   const filteredCustomers = customers.filter(c => 
     c.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -27,10 +27,21 @@ export default function CustomerDirectory() {
     if (sortBy === "High to Low Balance") {
       return Number(b.total_credit_balance || 0) - Number(a.total_credit_balance || 0);
     }
+    if (sortBy === "Low to High Balance") {
+      return Number(a.total_credit_balance || 0) - Number(b.total_credit_balance || 0);
+    }
     if (sortBy === "Oldest to Newest") {
       const dateA = new Date(a.updated_at || 0).getTime();
       const dateB = new Date(b.updated_at || 0).getTime();
       return dateA - dateB;
+    }
+    if (sortBy === "Newest to Oldest") {
+      const dateA = new Date(a.updated_at || 0).getTime();
+      const dateB = new Date(b.updated_at || 0).getTime();
+      return dateB - dateA;
+    }
+    if (sortBy === "Z-A") {
+      return (b.full_name || "").localeCompare(a.full_name || "");
     }
     // A-Z Default
     return (a.full_name || "").localeCompare(b.full_name || "");
@@ -102,7 +113,10 @@ export default function CustomerDirectory() {
             className="w-full md:w-48 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
           >
             <option value="A-Z">A-Z</option>
+            <option value="Z-A">Z-A</option>
             <option value="High to Low Balance">High to Low Balance</option>
+            <option value="Low to High Balance">Low to High Balance</option>
+            <option value="Newest to Oldest">Newest to Oldest</option>
             <option value="Oldest to Newest">Oldest to Newest</option>
           </select>
           <button

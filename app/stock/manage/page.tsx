@@ -28,6 +28,7 @@ import Fuse from "fuse.js";
 export default function StockManagement() {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | undefined>();
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
@@ -77,9 +78,14 @@ export default function StockManagement() {
 
   // Search filtering
   const filteredProducts = useMemo(() => {
+    let list = products;
+    if (showLowStockOnly) {
+      list = list.filter(p => (Number(p.current_stock) || 0) < 5);
+    }
+    
     const q = searchQuery.trim();
-    if (!q) return [];
-    const fuse = new Fuse(products, {
+    if (!q) return list;
+    const fuse = new Fuse(list, {
       keys: [
         { name: "name_en", weight: 0.4 },
         { name: "variation_name", weight: 0.3 },
@@ -167,6 +173,17 @@ export default function StockManagement() {
         </div>
         <div className="grid grid-cols-2 sm:flex sm:flex-row items-center gap-3 w-full sm:w-auto">
           <button
+            onClick={() => setShowLowStockOnly(!showLowStockOnly)}
+            className={`flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm text-sm ${
+              showLowStockOnly 
+                ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800" 
+                : "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4" />
+            Low Stock
+          </button>
+          <button
             onClick={() => setIsCategoryModalOpen(true)}
             className="flex justify-center items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm text-sm"
           >
@@ -209,7 +226,7 @@ export default function StockManagement() {
           </div>
 
           {/* Main Content Area: Default clean state VS Search results */}
-          {!searchQuery.trim() ? (
+          {!searchQuery.trim() && !showLowStockOnly ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center shadow-sm flex-1 flex flex-col items-center justify-center animate-in fade-in">
               <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 shadow-inner">
                 <Search className="w-8 h-8" />

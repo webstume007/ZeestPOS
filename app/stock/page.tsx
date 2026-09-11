@@ -83,12 +83,12 @@ export default function StockManagement() {
               <PackageCheck className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3 flex-1 flex items-end">
-            <div>
-              <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white">
+          <div className="mt-2 sm:mt-3 flex-1 flex items-end min-w-0">
+            <div className="truncate min-w-0 flex-1">
+              <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white truncate block">
                 {loading ? "..." : stats.distinctInStock.toLocaleString()}
               </span>
-              <span className="text-[9px] sm:text-xs text-slate-400 ml-1 sm:ml-1.5">distinct products</span>
+              <span className="text-[9px] sm:text-xs text-slate-400 ml-1 sm:ml-1.5 block">distinct products</span>
             </div>
           </div>
           <p className="text-[9px] sm:text-xs text-slate-500 mt-1 truncate">
@@ -104,12 +104,12 @@ export default function StockManagement() {
               <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3 flex-1 flex items-end">
-            <div>
-              <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white">
+          <div className="mt-2 sm:mt-3 flex-1 flex items-end min-w-0">
+            <div className="truncate min-w-0 flex-1">
+              <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white truncate block">
                 {loading ? "..." : stats.totalUnits.toLocaleString()}
               </span>
-              <span className="text-[9px] sm:text-xs text-slate-400 ml-1 sm:ml-1.5">units</span>
+              <span className="text-[9px] sm:text-xs text-slate-400 ml-1 sm:ml-1.5 block">units</span>
             </div>
           </div>
           <p className="text-[9px] sm:text-xs text-slate-500 mt-1 truncate">
@@ -125,8 +125,8 @@ export default function StockManagement() {
               <Banknote className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3 flex-1 flex items-end">
-            <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white">
+          <div className="mt-2 sm:mt-3 flex-1 flex items-end min-w-0">
+            <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white truncate block flex-1">
               {loading ? "..." : `Rs. ${Math.round(stats.totalBuyCost).toLocaleString()}`}
             </span>
           </div>
@@ -145,8 +145,8 @@ export default function StockManagement() {
               <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3 flex-1 flex items-end">
-            <span className="text-lg sm:text-2xl font-black text-emerald-700 dark:text-emerald-400">
+          <div className="mt-2 sm:mt-3 flex-1 flex items-end min-w-0">
+            <span className="text-lg sm:text-2xl font-black text-emerald-700 dark:text-emerald-400 truncate block flex-1">
               {loading ? "..." : `Rs. ${Math.round(stats.projectedProfit).toLocaleString()}`}
             </span>
           </div>
