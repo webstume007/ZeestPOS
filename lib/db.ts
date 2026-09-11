@@ -855,21 +855,7 @@ export async function getAllCashTransactions(): Promise<CashTransaction[]> {
     return query(`SELECT * FROM cash_register ORDER BY timestamp DESC`);
 }
 
-// Settings CRUD
-export async function getSetting(key: string, defaultValue: string = ""): Promise<string> {
-    const sql = `SELECT value FROM settings WHERE key = $1`;
-    const rows = await query<{ value: string }>(sql, [key]);
-    return rows.length > 0 ? rows[0].value : defaultValue;
-}
 
-export async function updateSetting(key: string, value: string): Promise<void> {
-    const sql = `
-        INSERT INTO settings (key, value) 
-        VALUES ($1, $2)
-        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
-    `;
-    await query(sql, [key, value]);
-}
 
 export async function getSales(): Promise<Sale[]> {
     const sql = `
