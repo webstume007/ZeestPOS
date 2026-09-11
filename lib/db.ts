@@ -19,6 +19,13 @@ export interface Product {
     updated_at?: string | null;
 }
 
+export interface ProductAnalytics {
+    product_id: string;
+    total_sold_quantity: number;
+    total_profit_generated: number;
+    total_stock_added: number;
+}
+
 export interface Vendor {
     id: string;
     name: string;
@@ -507,6 +514,20 @@ export async function getLowStockCount(): Promise<number> {
 export async function getProducts(): Promise<Product[]> {
     // Always query fresh data directly from local PGlite (fast, in-memory, no stale cache)
     return await query<Product>('SELECT * FROM products WHERE is_deleted IS NOT TRUE ORDER BY name_en ASC');
+}
+
+export async function getProductAnalytics(): Promise<ProductAnalytics[]> {
+    return await query<ProductAnalytics>(`
+        SELECT 
+            p.id as product_id,
+            COALESCE(SUM(si.quantity), 0) as total_sold_quantity,
+            COALESCE(SUM((si.price_applied - p.buy_price) * si.quantity), 0) as total_profit_generated,
+            COALESCE((SELECT SUM(quantity_added) FROM stock_logs WHERE product_id = p.id), 0) as total_stock_added
+        FROM products p
+        LEFT JOIN sale_items si ON si.product_id = p.id
+        WHERE p.is_deleted IS NOT TRUE
+        GROUP BY p.id, p.buy_price
+    `);
 }
 
 export async function createProduct(product: Omit<Product, 'id'>): Promise<Product> {

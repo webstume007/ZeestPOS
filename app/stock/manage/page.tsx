@@ -9,7 +9,7 @@ import { DamageLossForm } from "@/components/stock/DamageLossForm";
 import { ProductHistoryModal } from "@/components/stock/ProductHistoryModal";
 import { CategoryManager } from "@/components/stock/CategoryManager";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { getProducts, deleteProduct, Product } from "@/lib/db";
+import { getProducts, getProductAnalytics, deleteProduct, Product, ProductAnalytics } from "@/lib/db";
 import { 
   Plus, 
   Edit2, 
@@ -40,13 +40,28 @@ export default function StockManagement() {
   const [damageProduct, setDamageProduct] = useState<Product | undefined>();
   const [loading, setLoading] = useState(true);
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<Record<string, ProductAnalytics>>({});
+  
+  // Stock Filters
+  const [activeFilter, setActiveFilter] = useState<"all" | "low_stock" | "most_sold" | "most_profit">("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   const { user } = useAuth();
 
   const fetchProducts = async () => {
     try {
-      const data = await getProducts();
+      const [data, analyticsData] = await Promise.all([
+        getProducts(),
+        getProductAnalytics()
+      ]);
       setProducts(data || []);
+      
+      const analyticsMap: Record<string, ProductAnalytics> = {};
+      (analyticsData || []).forEach(a => {
+        analyticsMap[a.product_id] = a;
+      });
+      setAnalytics(analyticsMap);
     } catch (error) {
       console.error("Failed to fetch products:", error);
     } finally {
@@ -79,8 +94,19 @@ export default function StockManagement() {
   // Search filtering
   const filteredProducts = useMemo(() => {
     let list = products;
-    if (showLowStockOnly) {
-      list = list.filter(p => (Number(p.current_stock) || 0) < 5);
+    
+    if (activeFilter === "low_stock") {
+      list = list.filter(p => {
+        const a = analytics[p.id];
+        const added = a?.total_stock_added || 0;
+        const current = Number(p.current_stock) || 0;
+        // <= 10% of total added, or <= 5, or 0
+        return current === 0 || current <= 5 || (added > 0 && current <= (added * 0.1));
+      });
+    } else if (activeFilter === "most_sold") {
+      list = [...list].sort((a, b) => (analytics[b.id]?.total_sold_quantity || 0) - (analytics[a.id]?.total_sold_quantity || 0));
+    } else if (activeFilter === "most_profit") {
+      list = [...list].sort((a, b) => (analytics[b.id]?.total_profit_generated || 0) - (analytics[a.id]?.total_profit_generated || 0));
     }
     
     const q = searchQuery.trim();
@@ -97,7 +123,14 @@ export default function StockManagement() {
       ignoreLocation: true,
     });
     return fuse.search(q).map(result => result.item);
-  }, [products, searchQuery]);
+  }, [products, searchQuery, activeFilter, analytics]);
+
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredProducts, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
   const handleOpenProductModal = (product?: Partial<Product>) => {
     setEditingProduct(product);
@@ -171,18 +204,7 @@ export default function StockManagement() {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:flex sm:flex-row items-center gap-3 w-full sm:w-auto">
-          <button
-            onClick={() => setShowLowStockOnly(!showLowStockOnly)}
-            className={`flex justify-center items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm text-sm ${
-              showLowStockOnly 
-                ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800" 
-                : "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
-            }`}
-          >
-            <AlertTriangle className="w-4 h-4" />
-            Low Stock
-          </button>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <button
             onClick={() => setIsCategoryModalOpen(true)}
             className="flex justify-center items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm text-sm"
@@ -223,10 +245,39 @@ export default function StockManagement() {
                 </button>
               )}
             </div>
+            
+            {/* Advanced Filters (Mobile Nano Arrow / Desktop Tabs) */}
+            <div className="mt-3 flex items-center pl-2 md:pl-0">
+              <div className="md:hidden flex items-center">
+                <select
+                  value={activeFilter}
+                  onChange={(e) => setActiveFilter(e.target.value as any)}
+                  className="appearance-none bg-transparent border-none text-xs text-slate-500 font-medium outline-none pr-4"
+                  style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundPosition: 'right center', backgroundRepeat: 'no-repeat', backgroundSize: '12px' }}
+                >
+                  <option value="all">All Products</option>
+                  <option value="low_stock">Low Stock (≤10%)</option>
+                  <option value="most_sold">Most Sold</option>
+                  <option value="most_profit">Most Profitable</option>
+                </select>
+              </div>
+              <div className="hidden md:flex items-center gap-2 overflow-x-auto pb-1">
+                <button onClick={() => setActiveFilter("all")} className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${activeFilter === "all" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>All Products</button>
+                <button onClick={() => setActiveFilter("low_stock")} className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1 ${activeFilter === "low_stock" ? "bg-red-600 text-white" : "bg-red-50 text-red-600 hover:bg-red-100"}`}>
+                  <AlertTriangle className="w-3.5 h-3.5" /> Low Stock
+                </button>
+                <button onClick={() => setActiveFilter("most_sold")} className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1 ${activeFilter === "most_sold" ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-600 hover:bg-blue-100"}`}>
+                  Most Sold
+                </button>
+                <button onClick={() => setActiveFilter("most_profit")} className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1 ${activeFilter === "most_profit" ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"}`}>
+                  Most Profitable
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Main Content Area: Default clean state VS Search results */}
-          {!searchQuery.trim() && !showLowStockOnly ? (
+          {!searchQuery.trim() && activeFilter === "all" ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center shadow-sm flex-1 flex flex-col items-center justify-center animate-in fade-in">
               <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 shadow-inner">
                 <Search className="w-8 h-8" />
@@ -288,14 +339,14 @@ export default function StockManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredProducts.length === 0 ? (
+                {paginatedProducts.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
                       No products found matching &ldquo;{searchQuery}&rdquo;.
                     </td>
                   </tr>
                 ) : (
-                  filteredProducts.map((product) => {
+                  paginatedProducts.map((product) => {
                     const buyPrice = Number(product.buy_price) || 0;
                     const retailPrice = Number(product.retail_price) || 0;
                     const unitProfit = retailPrice - buyPrice;
@@ -355,12 +406,12 @@ export default function StockManagement() {
 
             {/* Mobile Card List */}
             <div className="md:hidden flex flex-col p-3 gap-3">
-              {filteredProducts.length === 0 ? (
+              {paginatedProducts.length === 0 ? (
                 <div className="p-12 text-center text-slate-500">
                   No products found matching &ldquo;{searchQuery}&rdquo;.
                 </div>
               ) : (
-                filteredProducts.map((product) => {
+                paginatedProducts.map((product) => {
                   const buyPrice = Number(product.buy_price) || 0;
                   const retailPrice = Number(product.retail_price) || 0;
                   const unitProfit = retailPrice - buyPrice;
@@ -441,6 +492,31 @@ export default function StockManagement() {
               )}
             </div>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="text-xs text-slate-500">
+                Showing {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredProducts.length)} of {filteredProducts.length}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
