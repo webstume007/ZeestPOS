@@ -176,11 +176,11 @@ export default function POSPage() {
 
   const filteredCustomers = customerSearchQuery.trim()
     ? customerFuse.current?.search(customerSearchQuery).map((r) => r.item) || []
-    : customers.slice(0, 8);
+    : [];
 
   const filteredCheckoutCustomers = checkoutCustomerQuery.trim()
     ? customerFuse.current?.search(checkoutCustomerQuery).map((r) => r.item) || []
-    : customers.slice(0, 8);
+    : [];
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -645,7 +645,9 @@ const playBeep = () => {
                     <span>Walk-in (cash sale)</span>
                     <span className="text-[10px] text-slate-400">Default</span>
                   </button>
-                  {filteredCustomers.length === 0 ? (
+                  {customerSearchQuery.trim() === "" ? (
+                    <div className="p-3 text-center text-xs text-slate-400">Type to search for a customer...</div>
+                  ) : filteredCustomers.length === 0 ? (
                     <div className="p-3 text-center text-xs text-slate-400">No customers found</div>
                   ) : (
                     filteredCustomers.map((c) => (
@@ -1067,7 +1069,9 @@ const playBeep = () => {
                     
                     {isCheckoutCustomerOpen && (
                       <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-48 overflow-y-auto z-50 divide-y divide-slate-100 dark:divide-slate-700/50">
-                        {filteredCheckoutCustomers.length === 0 ? (
+                        {checkoutCustomerQuery.trim() === "" ? (
+                          <div className="p-2 text-center text-xs text-slate-400">Type to search for a customer...</div>
+                        ) : filteredCheckoutCustomers.length === 0 ? (
                           <div className="p-2 text-center text-xs text-slate-400">No customers found</div>
                         ) : (
                           filteredCheckoutCustomers.map((c) => (

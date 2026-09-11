@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ShoppingCart, Package, History, Users, MonitorSpeaker, Settings, UserCircle, TrendingUp, DollarSign, Box } from "lucide-react";
 
 import { getDashboardStats, DashboardStats } from "@/lib/db";
+import { formatCompactNumber } from "@/lib/format";
 import { Logo } from "@/components/ui/Logo";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -55,7 +56,7 @@ export default function Dashboard() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-slate-500 mb-0.5 truncate">Today's Sales</p>
-            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">Rs {stats?.todaySales.toLocaleString() || "0"}</p>
+            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Rs {formatCompactNumber(stats?.todaySales)}</p>
           </div>
         </div>
         
@@ -65,7 +66,7 @@ export default function Dashboard() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-slate-500 mb-0.5 truncate">Today's Profit</p>
-            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">Rs {stats?.todayProfit.toLocaleString() || "0"}</p>
+            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Rs {formatCompactNumber(stats?.todayProfit)}</p>
           </div>
         </div>
 
@@ -75,7 +76,7 @@ export default function Dashboard() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-slate-500 mb-0.5 truncate">Items in Stock</p>
-            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">{stats?.availableStockSum.toLocaleString() || "0"}</p>
+            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">{formatCompactNumber(stats?.availableStockSum)}</p>
           </div>
         </div>
 
@@ -85,7 +86,7 @@ export default function Dashboard() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-slate-500 mb-0.5 truncate">Inventory Value</p>
-            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">Rs {stats?.inventoryValuation.toLocaleString() || "0"}</p>
+            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Rs {formatCompactNumber(stats?.inventoryValuation)}</p>
           </div>
         </div>
 
@@ -95,7 +96,7 @@ export default function Dashboard() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-slate-500 mb-0.5 truncate">Low Stock Items</p>
-            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">{stats?.lowStockCount.toLocaleString() || "0"}</p>
+            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">{formatCompactNumber(stats?.lowStockCount)}</p>
           </div>
         </div>
 
@@ -105,7 +106,7 @@ export default function Dashboard() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-slate-500 mb-0.5 truncate">Total Khata</p>
-            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">Rs {stats?.totalKhataOutstanding.toLocaleString() || "0"}</p>
+            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Rs {formatCompactNumber(stats?.totalKhataOutstanding)}</p>
           </div>
         </div>
       </div>

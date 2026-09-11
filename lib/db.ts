@@ -161,6 +161,52 @@ export async function getUsers(): Promise<User[]> {
     return await query<User>("SELECT * FROM users ORDER BY username ASC");
 }
 
+export async function getProfitStats(startDate?: string, endDate?: string): Promise<{ sales: number; profit: number }> {
+    let dateFilter = "";
+    let dateFilterSales = "";
+    let params: any[] = [];
+
+    if (startDate && endDate) {
+        dateFilterSales = "WHERE DATE(timestamp) >= $1 AND DATE(timestamp) <= $2";
+        dateFilter = "WHERE DATE(s.timestamp) >= $1 AND DATE(s.timestamp) <= $2";
+        params = [startDate, endDate];
+    } else if (startDate) {
+        dateFilterSales = "WHERE DATE(timestamp) >= $1";
+        dateFilter = "WHERE DATE(s.timestamp) >= $1";
+        params = [startDate];
+    } else if (endDate) {
+        dateFilterSales = "WHERE DATE(timestamp) <= $1";
+        dateFilter = "WHERE DATE(s.timestamp) <= $1";
+        params = [endDate];
+    }
+
+    const salesRes = await query<{ total_sales: number, total_discount: number }>(`
+        SELECT 
+            COALESCE(SUM(total_amount), 0) as total_sales,
+            COALESCE(SUM(discount_amount), 0) as total_discount
+        FROM sales
+        ${dateFilterSales}
+    `, params);
+
+    const profitRes = await query<{ profit: number }>(`
+        SELECT COALESCE(SUM((si.price_applied - p.buy_price) * si.quantity), 0) as profit
+        FROM sale_items si
+        JOIN products p ON si.product_id = p.id
+        JOIN sales s ON si.invoice_id = s.invoice_id
+        ${dateFilter}
+    `, params);
+
+    const totalSales = Number(salesRes[0]?.total_sales || 0);
+    const totalDiscount = Number(salesRes[0]?.total_discount || 0);
+    const rawProfit = Number(profitRes[0]?.profit || 0);
+    const netProfit = rawProfit - totalDiscount;
+
+    return {
+        sales: totalSales,
+        profit: netProfit
+    };
+}
+
 export async function hashPin(pin: string): Promise<string> {
     const msgBuffer = new TextEncoder().encode(pin);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);

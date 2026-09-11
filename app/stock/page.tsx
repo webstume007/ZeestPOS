@@ -10,6 +10,7 @@ import {
   TrendingUp,
   Search
 } from "lucide-react";
+import { formatCompactNumber } from "@/lib/format";
 
 export default function StockManagement() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -85,8 +86,8 @@ export default function StockManagement() {
           </div>
           <div className="mt-2 sm:mt-3 flex-1 flex items-end min-w-0">
             <div className="truncate min-w-0 flex-1">
-              <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white truncate block">
-                {loading ? "..." : stats.distinctInStock.toLocaleString()}
+              <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white block">
+                {loading ? "..." : formatCompactNumber(stats.distinctInStock)}
               </span>
               <span className="text-[9px] sm:text-xs text-slate-400 ml-1 sm:ml-1.5 block">distinct products</span>
             </div>
@@ -106,8 +107,8 @@ export default function StockManagement() {
           </div>
           <div className="mt-2 sm:mt-3 flex-1 flex items-end min-w-0">
             <div className="truncate min-w-0 flex-1">
-              <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white truncate block">
-                {loading ? "..." : stats.totalUnits.toLocaleString()}
+              <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white block">
+                {loading ? "..." : formatCompactNumber(stats.totalUnits)}
               </span>
               <span className="text-[9px] sm:text-xs text-slate-400 ml-1 sm:ml-1.5 block">units</span>
             </div>
@@ -126,8 +127,8 @@ export default function StockManagement() {
             </div>
           </div>
           <div className="mt-2 sm:mt-3 flex-1 flex items-end min-w-0">
-            <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white truncate block flex-1">
-              {loading ? "..." : `Rs. ${Math.round(stats.totalBuyCost).toLocaleString()}`}
+            <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white block flex-1">
+              {loading ? "..." : `Rs. ${formatCompactNumber(Math.round(stats.totalBuyCost))}`}
             </span>
           </div>
           <p className="text-[9px] sm:text-xs text-slate-500 mt-1 truncate">
@@ -146,8 +147,8 @@ export default function StockManagement() {
             </div>
           </div>
           <div className="mt-2 sm:mt-3 flex-1 flex items-end min-w-0">
-            <span className="text-lg sm:text-2xl font-black text-emerald-700 dark:text-emerald-400 truncate block flex-1">
-              {loading ? "..." : `Rs. ${Math.round(stats.projectedProfit).toLocaleString()}`}
+            <span className="text-lg sm:text-2xl font-black text-emerald-700 dark:text-emerald-400 block flex-1">
+              {loading ? "..." : `Rs. ${formatCompactNumber(Math.round(stats.projectedProfit))}`}
             </span>
           </div>
           <p className="text-[9px] sm:text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-1 font-medium truncate">

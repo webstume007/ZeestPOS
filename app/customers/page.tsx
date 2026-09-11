@@ -99,18 +99,36 @@ export default function CustomerDirectory() {
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Customer Directory</h1>
           <p className="text-slate-500 mt-2">Manage customer profiles and view Khata ledgers.</p>
         </div>
-        <div className="flex w-full md:w-auto items-center gap-4">
-          <input 
-            type="text"
-            placeholder="Search customers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full md:w-64 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-          />
+        <div className="flex w-full md:w-auto flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4">
+          <div className="flex flex-col gap-1 w-full md:w-64">
+            <input 
+              type="text"
+              placeholder="Search customers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+            {/* Mobile Filter Nano Arrow */}
+            <div className="md:hidden flex items-center pl-1">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="appearance-none bg-transparent border-none text-[10px] text-slate-500 dark:text-slate-400 font-medium outline-none pr-3"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundPosition: 'right center', backgroundRepeat: 'no-repeat', backgroundSize: '10px' }}
+              >
+                <option value="A-Z">A-Z</option>
+                <option value="Z-A">Z-A</option>
+                <option value="High to Low Balance">High to Low Balance</option>
+                <option value="Low to High Balance">Low to High Balance</option>
+                <option value="Newest to Oldest">Newest to Oldest</option>
+                <option value="Oldest to Newest">Oldest to Newest</option>
+              </select>
+            </div>
+          </div>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="w-full md:w-48 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            className="hidden md:block w-48 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
           >
             <option value="A-Z">A-Z</option>
             <option value="Z-A">Z-A</option>
@@ -121,10 +139,10 @@ export default function CustomerDirectory() {
           </select>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm whitespace-nowrap"
+            className="flex justify-center md:justify-start items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm whitespace-nowrap"
           >
             <Plus className="w-5 h-5" />
-            <span className="hidden md:inline">New Customer</span>
+            <span>New Customer</span>
           </button>
         </div>
       </div>
