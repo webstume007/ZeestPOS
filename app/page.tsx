@@ -15,9 +15,6 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   
-  const [profitPeriod, setProfitPeriod] = useState<ProfitPeriod>("month");
-  const [profitManualStart, setProfitManualStart] = useState("");
-  const [profitManualEnd, setProfitManualEnd] = useState("");
   const [profitPercentage, setProfitPercentage] = useState<number | null>(null);
 
   useEffect(() => {
@@ -33,31 +30,15 @@ export default function Dashboard() {
 
     const fetchProfit = async () => {
       let start: string | undefined;
-      let end: string | undefined;
       const today = new Date();
       const format = (d: Date) => d.toISOString().split("T")[0];
-
-      if (profitPeriod === "day") {
-        start = format(today);
-      } else if (profitPeriod === "week") {
-        const lastWeek = new Date();
-        lastWeek.setDate(today.getDate() - 7);
-        start = format(lastWeek);
-      } else if (profitPeriod === "month") {
-        const lastMonth = new Date();
-        lastMonth.setMonth(today.getMonth() - 1);
-        start = format(lastMonth);
-      } else if (profitPeriod === "year") {
-        const lastYear = new Date();
-        lastYear.setFullYear(today.getFullYear() - 1);
-        start = format(lastYear);
-      } else if (profitPeriod === "manual") {
-        if (profitManualStart) start = profitManualStart;
-        if (profitManualEnd) end = profitManualEnd;
-      }
+      
+      const lastMonth = new Date();
+      lastMonth.setMonth(today.getMonth() - 1);
+      start = format(lastMonth);
 
       try {
-        const res = await getProfitStats(start, end);
+        const res = await getProfitStats(start, undefined);
         if (res.sales > 0) {
           setProfitPercentage((res.profit / res.sales) * 100);
         } else {
@@ -77,7 +58,7 @@ export default function Dashboard() {
       window.removeEventListener('db-mutation', fetchStats);
       window.removeEventListener('db-mutation', fetchProfit);
     };
-  }, [profitPeriod, profitManualStart, profitManualEnd]);
+  }, []);
 
   const cards = [
     { title: "New Bill", icon: ShoppingCart, href: "/pos", color: "bg-blue-500" },
@@ -137,40 +118,23 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-3 md:p-5 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-start gap-3 relative">
+        <Link href="/analytics" className="bg-white dark:bg-slate-900 p-3 md:p-5 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-start gap-3 relative hover:shadow-md transition-shadow group cursor-pointer">
           <div className="flex w-full items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="p-2 md:p-2.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl shrink-0">
+              <div className="p-2 md:p-2.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl shrink-0 group-hover:scale-110 transition-transform duration-200">
                 <TrendingUp className="w-5 h-5" />
               </div>
               <p className="text-xs font-medium text-slate-500 truncate">Profit Margin</p>
             </div>
-            <select
-              value={profitPeriod}
-              onChange={(e) => setProfitPeriod(e.target.value as ProfitPeriod)}
-              className="text-[10px] md:text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1 outline-none text-slate-600 dark:text-slate-300"
-            >
-              <option value="day">Today</option>
-              <option value="week">Past Week</option>
-              <option value="month">Past Month</option>
-              <option value="year">Past Year</option>
-              <option value="all">All Time</option>
-              <option value="manual">Manual</option>
-            </select>
+            <span className="text-[10px] md:text-xs text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-md border border-slate-100 dark:border-slate-700">Past Month</span>
           </div>
-          {profitPeriod === "manual" && (
-            <div className="flex w-full gap-1 items-center">
-              <input type="date" value={profitManualStart} onChange={e => setProfitManualStart(e.target.value)} className="w-full text-[10px] p-1 rounded border border-slate-200 dark:border-slate-700 bg-transparent outline-none dark:text-white" />
-              <span className="text-slate-400 text-xs">-</span>
-              <input type="date" value={profitManualEnd} onChange={e => setProfitManualEnd(e.target.value)} className="w-full text-[10px] p-1 rounded border border-slate-200 dark:border-slate-700 bg-transparent outline-none dark:text-white" />
-            </div>
-          )}
-          <div className="min-w-0 w-full">
+          <div className="min-w-0 w-full flex items-end justify-between">
             <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">
               {profitPercentage !== null ? `${profitPercentage.toFixed(1)}%` : "..."}
             </p>
+            <span className="text-[10px] text-blue-500 font-medium">View Analytics &rarr;</span>
           </div>
-        </div>
+        </Link>
 
         <div className="bg-white dark:bg-slate-900 p-3 md:p-5 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3">
           <div className="p-2 md:p-2.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl shrink-0">

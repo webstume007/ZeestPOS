@@ -6,32 +6,14 @@ import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Package, History, Users, MonitorSpeaker, Settings, Truck, DownloadCloud, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Logo } from '@/components/ui/Logo';
-import { getLowStockCount } from '@/lib/db';
+
 
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   
   const [updateStatus, setUpdateStatus] = useState<"idle" | "available" | "downloaded">("idle");
-  const [lowStockCount, setLowStockCount] = useState(0);
 
-  useEffect(() => {
-    const fetchLowStock = async () => {
-      try {
-        const count = await getLowStockCount();
-        setLowStockCount(count);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    fetchLowStock();
-    window.addEventListener('db-synced', fetchLowStock);
-    window.addEventListener('db-mutation', fetchLowStock);
-    return () => {
-      window.removeEventListener('db-synced', fetchLowStock);
-      window.removeEventListener('db-mutation', fetchLowStock);
-    };
-  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined" && (window as any).electronAPI) {
@@ -84,11 +66,6 @@ export function Sidebar() {
             >
               <Icon className="w-5 h-5" />
               <span className="font-medium flex-1">{item.label}</span>
-              {item.href === '/stock' && lowStockCount > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                  {lowStockCount}
-                </span>
-              )}
             </Link>
           );
         })}
