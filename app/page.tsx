@@ -118,21 +118,15 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <Link href="/analytics" className="bg-white dark:bg-slate-900 p-3 md:p-5 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-start gap-3 relative hover:shadow-md transition-shadow group cursor-pointer">
-          <div className="flex w-full items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="p-2 md:p-2.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl shrink-0 group-hover:scale-110 transition-transform duration-200">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <p className="text-xs font-medium text-slate-500 truncate">Profit Margin</p>
-            </div>
-            <span className="text-[10px] md:text-xs text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-md border border-slate-100 dark:border-slate-700">Past Month</span>
+        <Link href="/analytics" className="bg-white dark:bg-slate-900 p-3 md:p-5 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3 hover:shadow-md transition-shadow group cursor-pointer">
+          <div className="p-2 md:p-2.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl shrink-0 group-hover:scale-110 transition-transform duration-200">
+            <TrendingUp className="w-5 h-5" />
           </div>
-          <div className="min-w-0 w-full flex items-end justify-between">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-slate-500 mb-0.5 truncate">Profit Margin</p>
             <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">
               {profitPercentage !== null ? `${profitPercentage.toFixed(1)}%` : "..."}
             </p>
-            <span className="text-[10px] text-blue-500 font-medium">View Analytics &rarr;</span>
           </div>
         </Link>
 
