@@ -41,10 +41,6 @@ export default function Vendors() {
     };
   }, []);
 
-  useEffect(() => {
-    fetchVendors();
-  }, []);
-
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -80,7 +76,15 @@ export default function Vendors() {
 
       <div className="flex-1 overflow-auto">
         {loading ? (
-          <div className="text-center p-8 text-slate-500">Loading vendors...</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="animate-pulse bg-white dark:bg-slate-900 p-5 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 h-32 flex flex-col gap-3">
+                <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-1/2"></div>
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/3"></div>
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/4 mt-auto"></div>
+              </div>
+            ))}
+          </div>
         ) : vendors.length === 0 ? (
           <div className="text-center p-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
             <p className="text-slate-500">No vendors found. Click "Add Vendor" to create one.</p>

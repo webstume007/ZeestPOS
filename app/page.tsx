@@ -22,6 +22,13 @@ export default function Dashboard() {
       }
     };
     fetchStats();
+
+    window.addEventListener('db-synced', fetchStats);
+    window.addEventListener('db-mutation', fetchStats);
+    return () => {
+      window.removeEventListener('db-synced', fetchStats);
+      window.removeEventListener('db-mutation', fetchStats);
+    };
   }, []);
 
   const cards = [
@@ -41,7 +48,7 @@ export default function Dashboard() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4 mb-6 md:mb-8">
         <div className="bg-white dark:bg-slate-900 p-3 md:p-5 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3">
           <div className="p-2 md:p-2.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
             <DollarSign className="w-5 h-5" />
@@ -79,6 +86,26 @@ export default function Dashboard() {
           <div>
             <p className="text-xs font-medium text-slate-500 mb-0.5">Inventory Value</p>
             <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">Rs {stats?.inventoryValuation.toLocaleString() || "0"}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-3 md:p-5 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3">
+          <div className="p-2 md:p-2.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl shrink-0">
+            <ShoppingCart className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-slate-500 mb-0.5">Low Stock Items</p>
+            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">{stats?.lowStockCount.toLocaleString() || "0"}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-3 md:p-5 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3">
+          <div className="p-2 md:p-2.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl shrink-0">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-slate-500 mb-0.5">Total Khata</p>
+            <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">Rs {stats?.totalKhataOutstanding.toLocaleString() || "0"}</p>
           </div>
         </div>
       </div>

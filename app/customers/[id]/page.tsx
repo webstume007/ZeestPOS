@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { deleteCustomer } from "@/lib/db";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function CustomerProfile({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -63,6 +64,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
       await fetchCustomerData();
     } catch (error) {
       console.error("Failed to update customer:", error);
+      toast.error("Failed to update customer");
     } finally {
       setSavingEdit(false);
     }
@@ -70,7 +72,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
 
   const handleDeleteCustomer = async () => {
     if (deleteConfirmName.trim().toLowerCase() !== customer?.full_name?.toLowerCase()) {
-      alert("Name does not match.");
+      toast.error("Name does not match.");
       return;
     }
     
@@ -80,6 +82,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
       router.push("/customers");
     } catch (error) {
       console.error("Failed to delete customer:", error);
+      toast.error("Failed to delete customer");
       setIsDeleting(false);
     }
   };

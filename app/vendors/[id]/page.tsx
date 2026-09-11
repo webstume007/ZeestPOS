@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { Vendor, StockLog, getVendors, getVendorStockHistory, updateVendor } from "@/lib/db";
+import { Vendor, StockLog, getVendors, getVendorStockHistory, updateVendor, deleteVendor } from "@/lib/db";
 import { Modal } from "@/components/ui/Modal";
-import { User, Phone, MapPin, Package, Download, Share2, Filter, Edit2, Calendar } from "lucide-react";
+import { User, Phone, MapPin, Package, Download, Share2, Filter, Edit2, Calendar, Trash2 } from "lucide-react";
 import { format, subDays, subMonths, subYears, isAfter } from "date-fns";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function VendorProfile({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
   const { id } = unwrappedParams;
+  const router = useRouter();
 
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [stockHistory, setStockHistory] = useState<StockLog[]>([]);
@@ -52,8 +55,23 @@ export default function VendorProfile({ params }: { params: Promise<{ id: string
       await fetchVendorData();
     } catch (error) {
       console.error("Failed to update vendor:", error);
+      toast.error("Failed to update vendor");
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteVendor = async () => {
+    if (!vendor) return;
+    if (!window.confirm("Are you sure you want to delete this vendor?")) return;
+    
+    try {
+      await deleteVendor(vendor.id);
+      toast.success("Vendor deleted");
+      router.push("/vendors");
+    } catch (error) {
+      console.error("Failed to delete vendor:", error);
+      toast.error("Failed to delete vendor");
     }
   };
 
@@ -142,21 +160,30 @@ export default function VendorProfile({ params }: { params: Promise<{ id: string
             </p>
           </div>
           
-          <button 
-            onClick={() => {
-              setEditFormData({ 
-                name: vendor.name || "", 
-                representative_name: vendor.representative_name || "", 
-                contact: vendor.contact || "",
-                address: vendor.address || ""
-              });
-              setIsEditModalOpen(true);
-            }}
-            className="absolute top-0 right-0 p-2 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors print:hidden"
-            title="Edit Vendor"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
+          <div className="absolute top-0 right-0 flex items-center gap-1 print:hidden">
+            <button 
+              onClick={() => {
+                setEditFormData({ 
+                  name: vendor.name || "", 
+                  representative_name: vendor.representative_name || "", 
+                  contact: vendor.contact || "",
+                  address: vendor.address || ""
+                });
+                setIsEditModalOpen(true);
+              }}
+              className="p-2 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              title="Edit Vendor"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={handleDeleteVendor}
+              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+              title="Delete Vendor"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Action Buttons */}

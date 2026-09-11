@@ -6,6 +6,7 @@ import { Plus, Search, Check, ChevronDown, UserPlus, X, Store, Trash2, Camera, S
 import { BarcodeScanner } from "@/components/ui/BarcodeScanner";
 import { Modal } from "@/components/ui/Modal";
 import { CategoryManager } from "@/components/stock/CategoryManager";
+import toast from "react-hot-toast";
 
 interface ProductFormProps {
   initialData?: Partial<Product> & { id?: string };
@@ -125,7 +126,7 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
       setNewVendorData({ name: "", representative_name: "", contact: "", address: "" });
     } catch (err) {
       console.error("Failed to create vendor", err);
-      alert("Failed to create vendor");
+      toast.error("Failed to create vendor");
     } finally {
       setSavingVendor(false);
     }
@@ -259,7 +260,7 @@ export function ProductForm({ initialData, onSuccess, onCancel }: ProductFormPro
           onSuccess();
         } catch (error) {
           console.error("Failed to delete product:", error);
-          alert("Failed to delete product.");
+          toast.error("Failed to delete product.");
           setLoading(false);
         }
       }

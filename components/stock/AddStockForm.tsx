@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Product, getVendors, Vendor, addStockLog, createVendor, createProduct, updateProduct } from "@/lib/db";
 import { Search, Plus, Check, ChevronDown, UserPlus, X, Store } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface AddStockFormProps {
   product: Product;
@@ -115,8 +116,8 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
       setIsAddingNewVendor(false);
       setIsDropdownOpen(false);
     } catch (err) {
-      console.error("Failed to create vendor:", err);
-      alert("Failed to create vendor. Please try again.");
+      console.error("Failed to create vendor", err);
+      toast.error("Failed to create vendor. Please try again.");
     } finally {
       setSavingVendor(false);
     }
@@ -125,14 +126,14 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.vendor_id) {
-      alert("Please select or add a vendor.");
+      toast.error("Please select or add a vendor.");
       return;
     }
     
     const quantityToAdd = isNewVariety ? newVarietyData.quantity : formData.quantity;
     
     if (quantityToAdd <= 0) {
-      alert("Please enter a valid quantity greater than 0.");
+      toast.error("Please enter a valid quantity greater than 0.");
       return;
     }
 
@@ -175,10 +176,11 @@ export function AddStockForm({ product, onSuccess, onCancel }: AddStockFormProps
         isNewVariety ? newVarietyData.buy_price : formData.buy_price
       );
       
+      toast.success("Stock added successfully!");
       onSuccess();
     } catch (error) {
       console.error("Failed to add stock:", error);
-      alert("Failed to add stock. Please try again.");
+      toast.error("Failed to add stock. Please try again.");
     } finally {
       setLoading(false);
     }

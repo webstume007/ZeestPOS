@@ -25,6 +25,7 @@ export interface Vendor {
     representative_name: string | null;
     contact: string | null;
     address: string | null;
+    is_deleted?: boolean | null;
 }
 
 export interface StockLog {
@@ -104,6 +105,8 @@ export interface DashboardStats {
     todayProfit: number;
     availableStockSum: number;
     inventoryValuation: number;
+    lowStockCount: number;
+    totalKhataOutstanding: number;
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
@@ -135,11 +138,21 @@ export async function getDashboardStats(): Promise<DashboardStats> {
         WHERE DATE(timestamp) = CURRENT_DATE
     `);
 
+    const lowStockRes = await query<{ count: number }>(`
+        SELECT count(*) as count FROM products WHERE current_stock <= 5 AND is_deleted = false
+    `);
+
+    const khataRes = await query<{ total_khata: number }>(`
+        SELECT COALESCE(SUM(total_credit_balance), 0) as total_khata FROM customers WHERE is_deleted = false
+    `);
+
     return {
         todaySales: Number(salesRes[0]?.total_sales || 0),
         todayProfit: Number(profitRes[0]?.profit || 0) - Number(discountRes[0]?.discount || 0),
         availableStockSum: Number(stockRes[0]?.total_stock || 0),
-        inventoryValuation: Number(stockRes[0]?.inventory_value || 0)
+        inventoryValuation: Number(stockRes[0]?.inventory_value || 0),
+        lowStockCount: Number(lowStockRes[0]?.count || 0),
+        totalKhataOutstanding: Number(khataRes[0]?.total_khata || 0)
     };
 }
 
@@ -147,8 +160,28 @@ export async function getUsers(): Promise<User[]> {
     return await query<User>("SELECT * FROM users ORDER BY username ASC");
 }
 
+export async function hashPin(pin: string): Promise<string> {
+    const msgBuffer = new TextEncoder().encode(pin);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export async function authenticateUser(username: string, pin: string): Promise<User | null> {
-    const users = await query<User>("SELECT * FROM users WHERE username = $1 AND pin = $2", [username, pin]);
+    const hashedPin = await hashPin(pin);
+    
+    // Check with hashed pin first
+    let users = await query<User>("SELECT * FROM users WHERE username = $1 AND pin = $2", [username, hashedPin]);
+    
+    // Fallback for existing plaintext pins during migration
+    if (users.length === 0) {
+        users = await query<User>("SELECT * FROM users WHERE username = $1 AND pin = $2", [username, pin]);
+        if (users.length > 0) {
+            // Found a plaintext match, update it to hashed version
+            await query("UPDATE users SET pin = $1 WHERE id = $2", [hashedPin, users[0].id]);
+        }
+    }
+    
     return users.length > 0 ? users[0] : null;
 }
 
@@ -203,6 +236,7 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
             representative_name TEXT,
             contact TEXT,
             address TEXT,
+            is_deleted BOOLEAN DEFAULT FALSE,
             updated_at TIMESTAMP DEFAULT NOW()
           );
             CREATE TABLE IF NOT EXISTS products (
@@ -418,6 +452,11 @@ export async function query<T = any>(sql: string, params: any[] = [], triggerSyn
 import { clearCache } from "./cache";
 
 // Product CRUD
+export async function getLowStockCount(): Promise<number> {
+    const rows = await query<{ count: number }>('SELECT count(*) as count FROM products WHERE current_stock <= 5 AND is_deleted = false');
+    return Number(rows[0]?.count || 0);
+}
+
 export async function getProducts(): Promise<Product[]> {
     // Always query fresh data directly from local PGlite (fast, in-memory, no stale cache)
     return await query<Product>('SELECT * FROM products WHERE is_deleted IS NOT TRUE ORDER BY name_en ASC');
@@ -445,7 +484,7 @@ export async function createProduct(product: Omit<Product, 'id'>): Promise<Produ
 
 // Vendor CRUD
 export async function getVendors(): Promise<Vendor[]> {
-    return await query<Vendor>('SELECT * FROM vendors ORDER BY name ASC');
+    return await query<Vendor>('SELECT * FROM vendors WHERE is_deleted IS NOT TRUE ORDER BY name ASC');
 }
 
 export async function createVendor(vendor: Omit<Vendor, 'id'>): Promise<Vendor> {
@@ -461,6 +500,10 @@ export async function createVendor(vendor: Omit<Vendor, 'id'>): Promise<Vendor> 
     ];
     const rows = await query<Vendor>(sql, params);
     return rows[0];
+}
+
+export async function deleteVendor(id: string): Promise<void> {
+    await query(`UPDATE vendors SET is_deleted = true, updated_at = NOW() WHERE id = $1`, [id]);
 }
 
 export async function updateVendor(id: string, vendor: Partial<Vendor>): Promise<Vendor> {
@@ -533,6 +576,10 @@ export async function updateProduct(id: string, product: Partial<Product>): Prom
             params.push(value);
             paramIndex++;
         }
+    }
+
+    if (!('updated_at' in product)) {
+        setKeys.push(`updated_at = NOW()`);
     }
 
     params.push(id);
@@ -846,7 +893,7 @@ export async function getSaleItems(invoiceId: string): Promise<{
     product: Product
 }[]> {
     const sql = `
-        SELECT si.*, p.name_en, p.name_ur, p.category, p.retail_price, p.wholesale_shopkeeper_price 
+        SELECT si.*, p.name_en, p.name_ur, p.category, p.retail_price, p.wholesale_shopkeeper_price, p.buy_price 
         FROM sale_items si
         JOIN products p ON si.product_id = p.id
         WHERE si.invoice_id = $1
@@ -866,7 +913,8 @@ export async function getSaleItems(invoiceId: string): Promise<{
             name_ur: r.name_ur,
             category: r.category,
             retail_price: r.retail_price,
-            wholesale_shopkeeper_price: r.wholesale_shopkeeper_price
+            wholesale_shopkeeper_price: r.wholesale_shopkeeper_price,
+            buy_price: r.buy_price
         } as Product
     }));
 }
@@ -880,17 +928,18 @@ export async function processSaleReturn(
     // This simple version restocks items and issues a cash out/khata reduction.
 
     let totalRefundAmount = 0;
+    let totalItemsReturned = 0;
+    
     for (const item of returnedItems) {
         if (item.return_quantity <= 0) continue;
         totalRefundAmount += item.return_quantity * item.price_applied;
+        totalItemsReturned += item.return_quantity;
         
         // Update product stock (add back)
         await query(`UPDATE products SET current_stock = current_stock + $1 WHERE id = $2`, [item.return_quantity, item.product_id]);
         
-        // Delete or update sale_items logic omitted for simplicity in this reverse process,
-        // but we assume the user just wants the stock back and money accounted for.
-        // We will update the sale record to reflect a note or adjust its total.
-        await query(`UPDATE sale_items SET quantity = quantity - $1 WHERE invoice_id = $2 AND product_id = $3`, [item.return_quantity, originalSale.invoice_id, item.product_id]);
+        // Decrease quantity in sale_items, prevent going negative
+        await query(`UPDATE sale_items SET quantity = quantity - $1 WHERE invoice_id = $2 AND product_id = $3 AND quantity >= $1`, [item.return_quantity, originalSale.invoice_id, item.product_id]);
     }
 
     if (totalRefundAmount > 0) {
@@ -914,8 +963,8 @@ export async function processSaleReturn(
 
         // Adjust Sale record
         await query(
-            `UPDATE sales SET total_amount = total_amount - $1, amount_paid = amount_paid - $2 WHERE invoice_id = $3`, 
-            [totalRefundAmount, refundToCash, originalSale.invoice_id]
+            `UPDATE sales SET total_amount = total_amount - $1, amount_paid = amount_paid - $2, products_sold = products_sold - $3 WHERE invoice_id = $4`, 
+            [totalRefundAmount, refundToCash, totalItemsReturned, originalSale.invoice_id]
         );
 
         // Update status if fully paid after return
@@ -925,16 +974,18 @@ export async function processSaleReturn(
         );
 
         if (refundToKhata > 0 && originalSale.customer_id) {
-            await query(`
+            const updatedCustomerRes = await query(`
                 UPDATE customers 
                 SET total_credit_balance = total_credit_balance - $1 
                 WHERE id = $2
+                RETURNING total_credit_balance
             `, [refundToKhata, originalSale.customer_id]);
+            const newBalance = updatedCustomerRes.rows[0]?.total_credit_balance || 0;
             
             await query(`
                 INSERT INTO customer_transactions (id, customer_id, type, amount, balance_after, description, created_by, timestamp)
-                VALUES (gen_random_uuid(), $1, 'payment', $2, 0, $3, $4, NOW())
-            `, [originalSale.customer_id, refundToKhata, `Return/Refund for Invoice ${originalSale.invoice_number} (Khata Adjustment)`, cashierName]);
+                VALUES (gen_random_uuid(), $1, 'payment', $2, $3, $4, $5, NOW())
+            `, [originalSale.customer_id, refundToKhata, newBalance, `Return/Refund for Invoice ${originalSale.invoice_number} (Khata Adjustment)`, cashierName]);
         }
 
         if (refundToCash > 0) {
@@ -961,4 +1012,26 @@ export async function recordDamageLoss(productId: string, productName: string, q
             VALUES (gen_random_uuid(), 'no-shift', $1, 0, $2, $3)
         `, [cashierName, totalLoss, `Damaged/Lost Inventory: ${productName} (${quantity} units)`]);
     }
+}
+
+export async function getSettings(): Promise<Record<string, string>> {
+    const rows = await query<{ key: string, value: string }>('SELECT key, value FROM settings');
+    const settings: Record<string, string> = {};
+    for (const row of rows) {
+        settings[row.key] = row.value;
+    }
+    return settings;
+}
+
+export async function getSetting(key: string): Promise<string | null> {
+    const rows = await query<{ value: string }>('SELECT value FROM settings WHERE key = $1', [key]);
+    return rows[0]?.value || null;
+}
+
+export async function setSetting(key: string, value: string): Promise<void> {
+    await query(`
+        INSERT INTO settings (key, value, updated_at) 
+        VALUES ($1, $2, NOW()) 
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+    `, [key, value]);
 }

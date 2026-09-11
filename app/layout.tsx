@@ -6,6 +6,7 @@ import { MobileNav } from "@/components/layout/MobileNav";
 
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -40,8 +41,11 @@ export default function RootLayout({
               {children}
             </main>
             <MobileNav />
-          </AuthProvider>
-        </ThemeProvider>
+            <Toaster position="top-center" toastOptions={{
+              className: 'dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 shadow-lg',
+              duration: 3000,
+            }} />
+          </AuthProvider>        </ThemeProvider>
       </body>
     </html>
   );

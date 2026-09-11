@@ -89,8 +89,6 @@ export function useSync() {
     if (syncIntervalPref === "hourly") intervalTime = 3600000;
     else if (syncIntervalPref === "daily") intervalTime = 86400000;
     else if (syncIntervalPref === "weekly") intervalTime = 604800000;
-    // For realtime, do a periodic background check every 10 seconds (was 2 minutes)
-    else if (syncIntervalPref === "realtime") intervalTime = 10000;
 
     let interval: any = null;
     if (intervalTime > 0) {

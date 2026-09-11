@@ -345,6 +345,9 @@ const playBeep = () => {
     setCart((prev) => prev.filter((item) => item.product.id !== productId));
 
   const clearBill = () => {
+    if (cart.length > 0 && !window.confirm("Are you sure you want to clear the entire bill?")) {
+      return;
+    }
     setCart([]);
     setDiscount(0);
     setWalkinPhone("");
@@ -447,7 +450,9 @@ const playBeep = () => {
       }
 
       let customerName = selectedCustomer ? selectedCustomer.full_name : "Walk-in Customer";
-      if (!selectedCustomer && walkinPhone.trim()) {
+      if (selectedCustomer && selectedCustomer.whatsapp_number) {
+        customerName += ` (${selectedCustomer.whatsapp_number})`;
+      } else if (!selectedCustomer && walkinPhone.trim()) {
         customerName += ` (${walkinPhone})`;
       }
 
@@ -475,7 +480,8 @@ const playBeep = () => {
         };
       });
 
-      await processCheckout(saleData as never, saleItems as never, "no-shift", creditUpdate);
+      const shiftId = localStorage.getItem("active_shift_id") || "no-shift";
+      await processCheckout(saleData as never, saleItems as never, shiftId, creditUpdate);
 
       setLastInvoiceData({
         sale: saleData,
@@ -944,6 +950,21 @@ const playBeep = () => {
                 />
               </div>
             )}
+          </div>
+
+          {/* Cart Summary */}
+          <div className="max-h-32 overflow-y-auto space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2 text-xs">
+            {cart.map((item, i) => (
+              <div key={i} className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                <div className="truncate flex-1 pr-2">
+                  <span className="font-semibold text-slate-900 dark:text-white mr-1">{item.quantity}x</span> 
+                  {item.product.name_en}
+                </div>
+                <div className="shrink-0 font-medium text-slate-900 dark:text-white tabular-nums">
+                  Rs {Math.round(getPrice(item) * item.quantity)}
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">

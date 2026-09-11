@@ -41,19 +41,37 @@ input[type="number"] {
 }
 
 @media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
+  
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+
   body * {
     visibility: hidden;
   }
+
   .print-receipt,
   .print-receipt * {
     visibility: visible;
   }
+
   .print-receipt {
-    position: absolute;
+    position: fixed;
     left: 0;
     top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 10px;
     box-shadow: none !important;
+    background: transparent !important;
   }
+
   .no-print {
     display: none !important;
   }

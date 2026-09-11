@@ -1,7 +1,8 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import html2canvas from "html2canvas";
 import { Share2, Printer, Download } from "lucide-react";
-import { Sale } from "@/lib/db";
+import toast from "react-hot-toast";
+import { Sale, getSetting } from "@/lib/db";
 import { format } from "date-fns";
 
 interface InvoiceReceiptProps {
@@ -16,6 +17,13 @@ interface InvoiceReceiptProps {
 
 export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
+  const [shopName, setShopName] = useState("BajwaStore");
+
+  useEffect(() => {
+    getSetting("shop_name").then(val => {
+      if (val) setShopName(val);
+    });
+  }, []);
 
   const shareInvoice = async () => {
     if (!receiptRef.current) return;
@@ -32,7 +40,7 @@ export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
             await navigator.share({
               files: [file],
               title: `Invoice ${sale.invoice_number}`,
-              text: `Invoice ${sale.invoice_number} from BajwaStore.`,
+              text: `Invoice ${sale.invoice_number} from ${shopName}.`,
             });
           } catch (e) {
             console.error("Native share cancelled or failed", e);
@@ -78,7 +86,7 @@ export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
     
     const newWindow = window.open("", "_blank");
     if (!newWindow) {
-      alert("Please allow popups to share on WhatsApp.");
+      toast.error("Please allow popups to share on WhatsApp.");
       return;
     }
 
@@ -138,7 +146,7 @@ export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
           className="print-receipt bg-white w-full max-w-[350px] p-6 shadow-sm font-mono text-slate-900 rounded"
         >
           <div className="flex flex-col items-center border-b border-black pb-4 mb-4">
-            <h1 className="text-2xl font-bold tracking-tight mb-1">BajwaStore</h1>
+            <h1 className="text-2xl font-bold tracking-tight mb-1">{shopName}</h1>
             <p className="text-xs text-gray-500">Invoice #{sale.invoice_number || sale.invoice_id?.split("-")[0]}</p>
           </div>
 
@@ -184,6 +192,20 @@ export function InvoiceReceipt({ sale, items, onDone }: InvoiceReceiptProps) {
               <span>Total</span>
               <span>Rs {(Number(sale.total_amount) - Number(sale.discount_amount || 0)).toFixed(0)}</span>
             </div>
+            {sale.payment_status === 'khata' && (
+              <div className="mt-2 text-xs space-y-1 text-slate-600">
+                <div className="flex justify-between">
+                  <span>Paid Amount</span>
+                  <span className="font-medium text-emerald-600">Rs {Number(sale.amount_paid || 0).toFixed(0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Added to Khata</span>
+                  <span className="font-medium text-red-600">
+                    Rs {((Number(sale.total_amount) - Number(sale.discount_amount || 0)) - Number(sale.amount_paid || 0)).toFixed(0)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="text-[9px] text-center text-slate-400 mt-6 pb-2 border-t border-slate-200 pt-3">

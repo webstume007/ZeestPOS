@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { Modal } from "@/components/ui/Modal";
 import { InvoiceReceipt } from "@/components/pos/InvoiceReceipt";
 import { useAuth } from "@/components/providers/AuthProvider";
+import toast from "react-hot-toast";
 
 type TimeFilter = "last_day" | "last_week" | "last_month" | "manual" | "all";
 
@@ -132,19 +133,19 @@ export default function SalesHistory() {
     })).filter(i => i.return_quantity > 0);
 
     if (itemsToReturn.length === 0) {
-      alert("No items selected to return.");
+      toast.error("No items selected to return.");
       return;
     }
 
     setIsProcessingReturn(true);
     try {
       await processSaleReturn(selectedSale, itemsToReturn, user?.username || "Admin");
-      alert("Return processed successfully. Stock has been restored and amount adjusted.");
+      toast.success("Return processed successfully. Stock restored.");
       setShowReturn(false);
       fetchSales(); // Refresh
     } catch (e) {
       console.error(e);
-      alert("Failed to process return.");
+      toast.error("Failed to process return.");
     } finally {
       setIsProcessingReturn(false);
     }
@@ -305,9 +306,22 @@ export default function SalesHistory() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {loading ? (
-                  <tr>
-                    <td colSpan={9} className="px-6 py-12 text-center text-slate-500">Loading sales history...</td>
-                  </tr>
+                  <>
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="px-4 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-24"></div></td>
+                        <td className="px-4 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-16"></div></td>
+                        <td className="px-4 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-32"></div></td>
+                        <td className="px-4 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-20"></div></td>
+                        <td className="px-4 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-12 mx-auto"></div></td>
+                        <td className="px-4 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-16 ml-auto"></div></td>
+                        <td className="px-4 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-16 ml-auto"></div></td>
+                        <td className="px-4 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-16 ml-auto"></div></td>
+                        <td className="px-4 py-4"><div className="h-6 bg-slate-200 dark:bg-slate-800 rounded-full w-16 mx-auto"></div></td>
+                        <td className="px-4 py-4"><div className="h-8 bg-slate-200 dark:bg-slate-800 rounded w-24 ml-auto"></div></td>
+                      </tr>
+                    ))}
+                  </>
                 ) : paginatedSales.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="px-6 py-12 text-center">

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Settings as SettingsIcon, User as UserIcon, Shield, Laptop, Sun, Moon, Monitor, CloudSync, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Settings as SettingsIcon, User as UserIcon, Shield, Laptop, Sun, Moon, Monitor, CloudSync, RefreshCw, AlertCircle, CheckCircle2, Store, Save } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useSync } from "@/hooks/useSync";
+import { getSettings, setSetting } from "@/lib/db";
 import { formatDistanceToNow } from "date-fns";
 
 export default function Settings() {
@@ -13,14 +14,50 @@ export default function Settings() {
   const { status, error, lastSyncedTime, triggerManualSync, syncIntervalPref } = useSync();
   const [mounted, setMounted] = useState(false);
 
+  const [shopName, setShopName] = useState("");
+  const [shopAddress, setShopAddress] = useState("");
+  const [shopPhone, setShopPhone] = useState("");
+  const [isSavingShop, setIsSavingShop] = useState(false);
+
   useEffect(() => {
     setMounted(true);
+    getSettings().then(settings => {
+      setShopName(settings["shop_name"] || "");
+      setShopAddress(settings["shop_address"] || "");
+      setShopPhone(settings["shop_phone"] || "");
+    });
   }, []);
+
+  const handleSaveShop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingShop(true);
+    try {
+      await setSetting("shop_name", shopName);
+      await setSetting("shop_address", shopAddress);
+      await setSetting("shop_phone", shopPhone);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSavingShop(false);
+    }
+  };
 
   const handleSyncPrefChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     localStorage.setItem("auto_sync_interval", e.target.value);
     window.dispatchEvent(new Event("sync-pref-change"));
   };
+
+  if (!mounted) return null;
+
+  if (user?.role === 'cashier') {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-slate-500">
+        <Shield className="w-12 h-12 mb-4 text-red-400" />
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Access Denied</h2>
+        <p>You do not have permission to view settings.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-950/50">
@@ -64,6 +101,32 @@ export default function Settings() {
           <p className="text-xs text-slate-400 mt-3">
             Note: User accounts and 4-digit PINs are securely configured and managed by the administrator directly in the database.
           </p>
+        </section>
+
+        {/* Shop Information Section */}
+        <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+            <Store className="w-5 h-5 text-blue-500" /> Shop Information
+          </h3>
+          <p className="text-sm text-slate-500 mb-6">Details appear on printed invoices and receipts.</p>
+          
+          <form onSubmit={handleSaveShop} className="space-y-4 max-w-lg">
+            <div>
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Shop Name</label>
+              <input type="text" value={shopName} onChange={e => setShopName(e.target.value)} placeholder="BajwaStore" className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Address</label>
+              <input type="text" value={shopAddress} onChange={e => setShopAddress(e.target.value)} placeholder="Main Bazar, City" className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Phone</label>
+              <input type="text" value={shopPhone} onChange={e => setShopPhone(e.target.value)} placeholder="0300-1234567" className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            <button type="submit" disabled={isSavingShop} className="inline-flex items-center px-4 py-2 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
+              {isSavingShop ? "Saving..." : <><Save className="w-4 h-4 mr-2" /> Save Details</>}
+            </button>
+          </form>
         </section>
 
         {/* Cloud Sync Section */}

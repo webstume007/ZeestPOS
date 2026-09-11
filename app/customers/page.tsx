@@ -18,10 +18,23 @@ export default function CustomerDirectory() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(20);
 
+  const [sortBy, setSortBy] = useState<"A-Z" | "High to Low Balance" | "Oldest to Newest">("A-Z");
+
   const filteredCustomers = customers.filter(c => 
     c.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
     c.whatsapp_number?.includes(searchQuery)
-  );
+  ).sort((a, b) => {
+    if (sortBy === "High to Low Balance") {
+      return Number(b.total_credit_balance || 0) - Number(a.total_credit_balance || 0);
+    }
+    if (sortBy === "Oldest to Newest") {
+      const dateA = new Date(a.updated_at || 0).getTime();
+      const dateB = new Date(b.updated_at || 0).getTime();
+      return dateA - dateB;
+    }
+    // A-Z Default
+    return (a.full_name || "").localeCompare(b.full_name || "");
+  });
 
   useEffect(() => {
     setCurrentPage(1);
@@ -83,6 +96,15 @@ export default function CustomerDirectory() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full md:w-64 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
           />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="w-full md:w-48 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+          >
+            <option value="A-Z">A-Z</option>
+            <option value="High to Low Balance">High to Low Balance</option>
+            <option value="Oldest to Newest">Oldest to Newest</option>
+          </select>
           <button
             onClick={() => setIsModalOpen(true)}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm whitespace-nowrap"
@@ -95,7 +117,20 @@ export default function CustomerDirectory() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         {loading ? (
-          <p className="text-slate-500 col-span-full">Loading customers...</p>
+          <>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="animate-pulse bg-white dark:bg-slate-900 p-4 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 h-36 flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-1/2"></div>
+                  <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded-full w-16"></div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-2/3"></div>
+                  <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/2"></div>
+                </div>
+              </div>
+            ))}
+          </>
         ) : paginatedCustomers.length === 0 ? (
           <p className="text-slate-500 col-span-full">No customers found.</p>
         ) : (

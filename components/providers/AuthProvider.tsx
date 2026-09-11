@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User } from "@/lib/db";
 import { useRouter, usePathname } from "next/navigation";
+import { Logo } from "@/components/ui/Logo";
+import { Loader2 } from "lucide-react";
 
 interface AuthContextType {
   user: User | null;
@@ -61,7 +63,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   if (isLoading) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500">Loading...</div>;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
+        <div className="animate-pulse flex flex-col items-center space-y-6">
+          <Logo className="h-16 w-auto" />
+          <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="font-medium tracking-wide">Loading System...</span>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

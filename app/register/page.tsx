@@ -19,6 +19,7 @@ export default function CashRegister() {
   const [cashType, setCashType] = useState<"in" | "out">("in");
   const [amount, setAmount] = useState<number>(0);
   const [reason, setReason] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("1D");
   const [startDate, setStartDate] = useState<string>(() => {
@@ -48,6 +49,12 @@ export default function CashRegister() {
 
   useEffect(() => {
     fetchTransactions();
+    window.addEventListener('db-synced', fetchTransactions);
+    window.addEventListener('db-mutation', fetchTransactions);
+    return () => {
+      window.removeEventListener('db-synced', fetchTransactions);
+      window.removeEventListener('db-mutation', fetchTransactions);
+    };
   }, []);
 
   const handleCashSubmit = async (e: React.FormEvent) => {
@@ -98,11 +105,19 @@ export default function CashRegister() {
       if (timeFilter === "Manual") {
         const startTimestamp = startDate ? new Date(startDate + "T00:00:00").getTime() : 0;
         const endTimestamp = endDate ? new Date(endDate + "T23:59:59").getTime() : Infinity;
-        return txTime >= startTimestamp && txTime <= endTimestamp;
+        if (txTime < startTimestamp || txTime > endTimestamp) return false;
       }
+      
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        if (!tx.reason.toLowerCase().includes(q)) {
+          return false;
+        }
+      }
+      
       return true;
     });
-  }, [transactions, timeFilter, startDate, endDate]);
+  }, [transactions, timeFilter, startDate, endDate, searchQuery]);
 
   const totalIn = filteredTransactions.reduce((acc, curr) => acc + Number(curr.cash_in), 0);
   const totalOut = filteredTransactions.reduce((acc, curr) => acc + Number(curr.cash_out), 0);
@@ -128,6 +143,24 @@ export default function CashRegister() {
             Manage your drawer balance and cash flows.
           </p>
         </div>
+        <div className="w-full sm:w-auto max-w-sm ml-auto hidden sm:block">
+          <input
+            type="text"
+            placeholder="Search reasons..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+        </div>
+      </div>
+      <div className="mb-6 sm:hidden w-full">
+        <input
+          type="text"
+          placeholder="Search reasons..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+        />
       </div>
 
       {/* Summary Cards - Mobile: 2 in one line, drawer balance full width below */}
@@ -238,9 +271,16 @@ export default function CashRegister() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
               {loading ? (
-                <tr>
-                  <td colSpan={4} className="py-8 text-center text-slate-500">Loading transactions...</td>
-                </tr>
+                <>
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="py-3 md:py-4 pr-2 md:pr-6"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-24"></div><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-16 mt-1"></div></td>
+                      <td className="py-3 md:py-4 px-2 md:px-6"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-48"></div></td>
+                      <td className="py-3 md:py-4 px-2 md:px-6"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-20 ml-auto"></div></td>
+                      <td className="py-3 md:py-4 pl-2 md:pl-6"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-20 ml-auto"></div></td>
+                    </tr>
+                  ))}
+                </>
               ) : paginatedTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-8 text-center text-slate-500">No transactions found for the selected period.</td>
