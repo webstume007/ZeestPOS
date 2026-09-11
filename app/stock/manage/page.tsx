@@ -104,9 +104,13 @@ export default function StockManagement() {
         return current === 0 || current <= 5 || (added > 0 && current <= (added * 0.1));
       });
     } else if (activeFilter === "most_sold") {
-      list = [...list].sort((a, b) => (analytics[b.id]?.total_sold_quantity || 0) - (analytics[a.id]?.total_sold_quantity || 0));
+      list = list
+        .filter(p => (analytics[p.id]?.total_sold_quantity || 0) > 0)
+        .sort((a, b) => (analytics[b.id]?.total_sold_quantity || 0) - (analytics[a.id]?.total_sold_quantity || 0));
     } else if (activeFilter === "most_profit") {
-      list = [...list].sort((a, b) => (analytics[b.id]?.total_profit_generated || 0) - (analytics[a.id]?.total_profit_generated || 0));
+      list = list
+        .filter(p => (analytics[p.id]?.total_profit_generated || 0) > 0)
+        .sort((a, b) => (analytics[b.id]?.total_profit_generated || 0) - (analytics[a.id]?.total_profit_generated || 0));
     }
     
     const q = searchQuery.trim();
